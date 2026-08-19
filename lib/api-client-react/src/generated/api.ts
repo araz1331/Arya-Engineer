@@ -30,7 +30,9 @@ import type {
   ListArticlesParams,
   PdfArticleInput,
   ScrapeDebug,
-  ScrapeStatus
+  ScrapeStatus,
+  SeedUrlsInput,
+  SeedUrlsResponse
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -652,6 +654,77 @@ export const useStartScrape = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getStartScrapeMutationOptions(options));
+    }
+
+export const getSeedScrapeUrlsUrl = () => {
+
+
+
+
+  return `/api/scrape/seed`
+}
+
+/**
+ * @summary Add public article URLs to the scraper queue
+ */
+export const seedScrapeUrls = async (seedUrlsInput: SeedUrlsInput, options?: Parameters<typeof customFetch>[1]): Promise<SeedUrlsResponse> => {
+
+  return customFetch<SeedUrlsResponse>(getSeedScrapeUrlsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(seedUrlsInput)
+  }
+);}
+
+
+
+
+
+export const getSeedScrapeUrlsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof seedScrapeUrls>>, TError,{data: BodyType<SeedUrlsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof seedScrapeUrls>>, TError,{data: BodyType<SeedUrlsInput>}, TContext> => {
+
+const mutationKey = ['seedScrapeUrls'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof seedScrapeUrls>>, {data: BodyType<SeedUrlsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  seedScrapeUrls(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SeedScrapeUrlsMutationResult = NonNullable<Awaited<ReturnType<typeof seedScrapeUrls>>>
+    export type SeedScrapeUrlsMutationBody = BodyType<SeedUrlsInput>
+    export type SeedScrapeUrlsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add public article URLs to the scraper queue
+ */
+export const useSeedScrapeUrls = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof seedScrapeUrls>>, TError,{data: BodyType<SeedUrlsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof seedScrapeUrls>>,
+        TError,
+        {data: BodyType<SeedUrlsInput>},
+        TContext
+      > => {
+      return useMutation(getSeedScrapeUrlsMutationOptions(options));
     }
 
 export const getGetScrapeStatusUrl = () => {

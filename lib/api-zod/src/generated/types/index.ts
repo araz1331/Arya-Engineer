@@ -23,3 +23,5 @@ export * from './scrapeDebugResponseHeaders';
 export * from './scrapeStatus';
 export * from './scrapeStatusPhase';
 export * from './scrapeStatusStatus';
+export * from './seedUrlsInput';
+export * from './seedUrlsResponse';

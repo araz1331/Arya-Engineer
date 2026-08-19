@@ -216,6 +216,26 @@ export const StartScrapeResponse = zod.object({
 
 
 /**
+ * @summary Add public article URLs to the scraper queue
+ */
+export const seedScrapeUrlsBodyUrlsItemMax = 2000;
+
+export const seedScrapeUrlsBodyUrlsMax = 5000;
+
+
+
+export const SeedScrapeUrlsBody = zod.object({
+  "urls": zod.array(zod.string().min(1).max(seedScrapeUrlsBodyUrlsItemMax)).min(1).max(seedScrapeUrlsBodyUrlsMax)
+})
+
+export const SeedScrapeUrlsResponse = zod.object({
+  "added": zod.number(),
+  "skipped": zod.number(),
+  "invalid": zod.number()
+})
+
+
+/**
  * @summary Get scraper progress
  */
 export const GetScrapeStatusResponse = zod.object({

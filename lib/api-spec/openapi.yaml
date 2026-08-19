@@ -156,6 +156,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ScrapeStatus"
+  /scrape/seed:
+    post:
+      operationId: seedScrapeUrls
+      tags: [scraper]
+      summary: Add public article URLs to the scraper queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeedUrlsInput"
+      responses:
+        "201":
+          description: Seed URL import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeedUrlsResponse"
   /scrape/status:
     get:
       operationId: getScrapeStatus
@@ -315,4 +333,20 @@ components:
           type: object
           additionalProperties: { type: string }
         bodyPreview: { type: string }
+    SeedUrlsInput:
+      type: object
+      required: [urls]
+      properties:
+        urls:
+          type: array
+          minItems: 1
+          maxItems: 5000
+          items: { type: string, minLength: 1, maxLength: 2000 }
+    SeedUrlsResponse:
+      type: object
+      required: [added, skipped, invalid]
+      properties:
+        added: { type: number }
+        skipped: { type: number }
+        invalid: { type: number }
 

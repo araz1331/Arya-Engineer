@@ -1,10 +1,9 @@
 import * as cheerio from "cheerio";
-import { asc, count, eq, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { db, articleUrlsTable, articlesTable, scraperProgressTable } from "@workspace/db";
 import { logger } from "./logger";
 
 const BASE_URL = "https://support.sw.siemens.com/en-US/product/272221135/knowledge-base";
-const TOTAL_PAGES = 45;
 const ARTICLE_URL = (id: string) => `${BASE_URL}/${id}`;
 const PRIORITY_CATEGORIES = [
   "Installation & Upgrade",
@@ -46,11 +45,11 @@ async function updateProgress(values: Partial<typeof scraperProgressTable.$infer
     return;
   }
   await db.insert(scraperProgressTable).values({
-    currentPage: 1,
-    totalPages: TOTAL_PAGES,
+    currentPage: 0,
+    totalPages: 0,
     articlesScraped: 0,
     status: "idle",
-    phase: "discover",
+    phase: "content",
     ...values,
   });
 }
@@ -74,6 +73,36 @@ export async function debugScrape() {
   } catch (error) {
     return { statusCode: 502, responseHeaders: {}, bodyPreview: error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500) };
   }
+}
+
+const SEEDED_ARTICLE_PATTERN = /\/knowledge-base\/(KB\d+_EN_US|PL\d+)/i;
+
+function normalizeSeedUrl(value: string): string | null {
+  const match = value.trim().match(SEEDED_ARTICLE_PATTERN);
+  return match ? ARTICLE_URL(match[1].toUpperCase()) : null;
+}
+
+export async function seedArticleUrls(urls: string[]) {
+  let added = 0;
+  let skipped = 0;
+  let invalid = 0;
+  for (const value of urls) {
+    const url = normalizeSeedUrl(value);
+    if (!url) {
+      invalid += 1;
+      continue;
+    }
+    const [inserted] = await db.insert(articleUrlsTable).values({
+      url,
+      priority: 999,
+      scraped: false,
+      scrapedAt: null,
+      lastError: null,
+    }).onConflictDoNothing({ target: articleUrlsTable.url }).returning({ id: articleUrlsTable.id });
+    if (inserted) added += 1;
+    else skipped += 1;
+  }
+  return { added, skipped, invalid };
 }
 
 function extractArticleIds(html: string): string[] {

@@ -182,6 +182,22 @@ export interface ScrapeDebug {
   bodyPreview: string;
 }
 
+export interface SeedUrlsInput {
+  /**
+     * @minItems 1
+     * @maxItems 5000
+     * @items.minLength 1
+     * @items.maxLength 2000
+     */
+  urls: string[];
+}
+
+export interface SeedUrlsResponse {
+  added: number;
+  skipped: number;
+  invalid: number;
+}
+
 export type ListArticlesParams = {
 search?: string;
 /**
