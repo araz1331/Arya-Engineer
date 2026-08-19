@@ -21,6 +21,13 @@ const SKIPPED_CATEGORIES = [
   "Service Lifecycle Management",
   "Machine Builders",
 ] as const;
+const CATEGORY_ALIASES: Array<{ canonical: string; patterns: string[] }> = [
+  { canonical: "Installation & Upgrade", patterns: ["installation & upgrade", "installation and upgrade"] },
+  { canonical: "Getting Started", patterns: ["getting started"] },
+  { canonical: "Programming and Customization", patterns: ["programming and customization"] },
+  { canonical: "Engineering Process Management - Integration for CATIA", patterns: ["engineering process management - integration for catia"] },
+  { canonical: "Machine Builders", patterns: ["machine builders", "machine builder", "plm for machine builders", "industry solutions and functions - machine builder"] },
+];
 let activeRun = false;
 
 function parseCurl(curl: string | undefined): Record<string, string> {
@@ -122,10 +129,16 @@ function normalizeCategory(value: string): string {
 function categoryDetails(value: string | undefined) {
   if (!value) return { category: null, priority: 999, skipped: false };
   const normalized = normalizeCategory(value);
-  const category = [...PRIORITY_CATEGORIES, ...SKIPPED_CATEGORIES].find((candidate) =>
+  const alias = CATEGORY_ALIASES.find(({ patterns }) => patterns.some((pattern) => normalized.includes(pattern)));
+  const category = alias?.canonical ?? [...PRIORITY_CATEGORIES, ...SKIPPED_CATEGORIES].find((candidate) =>
     normalized.includes(normalizeCategory(candidate)),
   ) ?? null;
-  if (!category) return { category: null, priority: 999, skipped: false };
+  if (!category) {
+    const label = value.replace(/\s+/g, " ").trim().replace(/^[|>:/\-\s]+|[|>:/\-\s]+$/g, "");
+    return label.length > 0 && label.length <= 160
+      ? { category: label, priority: 999, skipped: false }
+      : { category: null, priority: 999, skipped: false };
+  }
   const priorityIndex = PRIORITY_CATEGORIES.indexOf(category as (typeof PRIORITY_CATEGORIES)[number]);
   return {
     category,
@@ -138,7 +151,7 @@ function categoryFromMarkup(article$: cheerio.CheerioAPI, contextSelector: strin
   const candidates = [
     article$("meta[name='category'], meta[property='article:section']").map((_, node) => article$(node).attr("content") ?? "").get(),
     article$("[data-category], [data-content-category], [class*='category'], [class*='breadcrumb']").map((_, node) => article$(node).text()).get(),
-    article$(contextSelector).text(),
+    article$(contextSelector).find("[data-category], [data-content-category], [class*='category'], [class*='breadcrumb']").map((_, node) => article$(node).text()).get(),
   ];
   for (const candidate of candidates.flat()) {
     const details = categoryDetails(candidate);

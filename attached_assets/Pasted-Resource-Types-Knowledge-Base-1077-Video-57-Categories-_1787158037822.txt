@@ -1,0 +1,845 @@
+Resource Types
+
+Knowledge Base 1077
+
+Video 57
+Categories
+Top Categories
+
+FAQ 450
+
+Newsletter 422
+
+Troubleshooting 136
+
+Problem/Defect 64
+
+Video 9
+
+Software Field Bulletin 5
+
+Best Practice 1
+
+Caveat 1
+
+Example 1
+
+Getting Started 1
+
+Knowledge Article 1
+More Categories
+
+General Support 548
+
+Quality Products 483
+
+Document Management 456
+
+Administration 452
+
+Installation & Upgrade 452
+
+Classification 448
+
+Change Management 447
+
+Teamcenter Share 447
+
+PLM for Machine Builders 446
+
+CAD Integrations 431
+
+Electronic Design Automation 426
+
+Lifecycle Visualization 426
+
+Manufacturing 426
+
+Application Usage 425
+
+PLM for Component Manufacturers 425
+
+PLM for Medical Devices 425
+
+Systems Engineering 425
+
+Bill of Materials Management 424
+
+Portfolio, Program & Project Management 424
+
+Newsletter 422
+
+Product Usage 410
+
+Troubleshooting 112
+
+Core Functions - Client 73
+
+Problem/Defect 63
+
+Active Workspace - Client Framework 59
+
+Active Workspace - Client Configuration 47
+
+Administration - Tools and Utilities 38
+
+Programming and Customization - ITK, SOA, JAVA, User Exits 38
+
+Active Workspace - Lifecycle Visualization 37
+
+Administration - Workflow 36
+
+Engineering Process Management - Integration for CATIA TCIC 35
+
+Manufacturing - Easy Plan 35
+
+Active Workspace Workflow 34
+
+Bill of Materials Management - Structure Manager SM PSE 34
+
+Active Workspace - Bill of Materials Management 33
+
+Active Workspace - Indexing and Search 33
+
+Reporting and Analytics 33
+
+Solutions and Functions - Classification 33
+
+Active Workspace - Change Management 32
+
+Active Workspace - Reports 32
+
+Active Workspace - Schedule Manager 32
+
+Administration - Access Manager 32
+
+Systems Engineering and Requirements and MBSE - Requirements 32
+
+Active Workspace - Classification 31
+
+Core Functions - Server 31
+
+Installation and Upgrade 31
+
+Active Workspace - Content and Document Management 30
+
+Active Workspace - 4th Generation Design 29
+
+Active Workspace - Manufacturing 29
+
+Bill of Materials Management - Bill of Materials Management 29
+
+Engineering Process Management - Integration for CREO IPEM 29
+
+Solutions and Functions - Change Management 29
+
+Industry Solutions and Functions - Medical Devices 28
+
+Engineering Process Management - Integration for NX 27
+
+Engineering Process Management - Integration for Solidworks SWIM 27
+
+Installation and Configuration and Infrastructure - Active Workspace 27
+
+Reporting and Analytics - Journal Workbench 27
+
+Compliance and Material Management - Integrated Material Management IMM 26
+
+Engineering Process Management - Integration for AutoCAD TCAA 26
+
+Installation and Configuration and Infrastructure - Database 26
+
+Security and Access 26
+
+Bill of Materials Management - Multi Structure Manager MSM 25
+
+Integration for NX/Embedded Client 25
+
+Lifecycle Visualization - Embedded 25
+
+Mechatronics Process Management - ALLEGRO, EPLAN, ORCAD 25
+
+Compliance and Material Management - Substance Compliance 24
+
+Engineering Process Management - Integration for Inventor TCAI 24
+
+Industry Solutions and Functions - Consumer Packaged Goods 24
+
+Manufacturing - Resource Manager 24
+
+Mechatronics Process Management - ALTIUM 24
+
+Service Lifecycle Management - SLM Integr. for Service Planner Maximo Integr. 24
+
+Application Configuration Requests 23
+
+Content and Document Management - Document Management 23
+
+Content and Document Management - Technical Publishing 23
+
+Engineering Process Management - Integration for IDEAS TCII 23
+
+Industry Solutions and Functions - Aerospace and Defense 23
+
+Industry Solutions and Functions - Automotive Supplier 23
+
+Industry Solutions and Functions - Retail Footwear and Apparel 23
+
+Industry Solutions and Functions - Supplier Collaboration Foundation 23
+
+Mechatronics Process Management - MATLAB 23
+
+Mechatronics Process Management - MENTOR 23
+
+Mechatronics Process Management - Other 23
+
+Service Lifecycle Management - Service Technician Access 23
+
+Sharing Data - Linked Data Framework LDF 23
+
+Solutions and Functions - 4th Generation Design 23
+
+Solutions and Functions - Quality Management 23
+
+Solutions and Functions - Schedule Manager 23
+
+Integrations for Mentor 22
+
+Operational Infrastructure 22
+
+Basic BOM Management 21
+
+Component Manufacturers 21
+
+Control & Inspection Planning 21
+
+Failure Mode and Effects Analysis (FMEA) 21
+
+Integration for Solid Works 21
+
+Line Designer and Fixture Planner 21
+
+Machine Builders 21
+
+Manufacturing Process Planner 21
+
+Medical Devices 21
+
+Problem Solving 21
+
+Process Simulate 21
+
+Program Planning 21
+
+Quality Action Management 21
+
+Quality Project Management 21
+
+RAC 21
+
+Requirements Management 21
+
+Rich Client 21
+
+Schedule Management 21
+
+Study Manager 21
+
+Teamcenter X Gateway for EDA 21
+
+Test and Verification Management 21
+
+Briefcase Browser 20
+
+Catalysts for Aerospace & Defense Verification Mgmt 20
+
+Catalysts for Automotive Supplier Process 20
+
+Catalysts for Electronics 20
+
+Catalysts for Industrial Machinery 20
+
+Catalysts for Shipbuilding 20
+
+Catalysts for Softlines, Hardlines and Footwear 20
+
+Installation 20
+
+Microsoft SQL Server Runtime (Standard Edition) CAL 20
+
+Microsoft SQL Server Runtime (Standard Edition) Core 20
+
+Nissan Toolkit 20
+
+Opcenter Connect FN for SAP S/4HANA 20
+
+Opcenter Connect FN for Teamcenter 20
+
+Opcenter Connect RDL for Teamcenter 20
+
+Oracle 20
+
+Teamcenter Gateway Extension Package 20
+
+Teamcenter Gateway for Camstar Enterprise Platform 20
+
+Teamcenter Gateway for Enterprise Applications 20
+
+Teamcenter Gateway for Oracle EBS 20
+
+Teamcenter Gateway for SAP Business Suite 20
+
+Teamcenter Gateway for SAP PLMSI 20
+
+Teamcenter Gateway for SAP S/4HANA 20
+
+Teamcenter Integration with SAP S4/HANA 20
+
+Teamcenter PCM Gateway for Enterprise Integrations 20
+
+Teamcenter PCM Gateway for SAP S/4HANA 20
+
+Teamcenter PCM Gateway for Teamcenter 20
+
+Deployment Center 19
+
+Teamcenter Integration 19
+
+Teamcenter Integration for Design 19
+
+Assemblies 18
+
+Documentation 18
+
+Modeling 18
+
+Product Usage CAD 18
+
+Ship Design 18
+
+4th Generation Design 17
+
+Block/UI Interface Stylers 17
+
+CAD Translators 17
+
+CLSF 17
+
+Content Migration Manager 17
+
+Drafting 17
+
+FloEFD 17
+
+Industrial Electrical Design 17
+
+Installation and Configuration and Infrastructure - General 17
+
+Knowledge Fusion 17
+
+Licensing 17
+
+Manufacturing Additive 17
+
+Manufacturing CMM 17
+
+Manufacturing General 17
+
+Manufacturing ISV 17
+
+Manufacturing Line Designer 17
+
+Manufacturing Post Builder 17
+
+Manufacturing Post Configurator 17
+
+Manufacturing Wire EDM 17
+
+Mechatronics Concept Designer 17
+
+Menuscript 17
+
+NX Legacy Documentation 17
+
+Open - All Languages 17
+
+Open Python 17
+
+Open for C/C++ 17
+
+Open for CAE 17
+
+Open for GRIP 17
+
+Open for Java 17
+
+PCB Design 17
+
+PMI 17
+
+Plotting 17
+
+Pre-NX6 UI Styler 17
+
+Product Usage CAM 17
+
+Product Usage Manufacturing Planning (LD/ALP) 17
+
+Robotic Machining 17
+
+Routing 17
+
+SNAP 17
+
+SPLM Common Licensing 17
+
+Sheet Metal 17
+
+Synchronization Manager 17
+
+TC for Manufacturing 17
+
+Teamcenter Integration for Manufacturing 17
+
+Tooling Design 17
+
+Topology Optimization for Designers 17
+
+UDO 17
+
+Acoustics 16
+
+Assembly FEM 16
+
+Correlation and Updating 16
+
+Durability 16
+
+Flexible Pipe 16
+
+GM/PDL Toolkit 16
+
+Laminate Composites 16
+
+Maintenance and Licensing 16
+
+Margin of Safety 16
+
+Motion 16
+
+Multiphysics 16
+
+NX Open 16
+
+Nonlinear 16
+
+Optimization 16
+
+Pre/Post 16
+
+Response Dynamics 16
+
+Samcef Environment 16
+
+Siemens PLM Common Licensing 16
+
+Simulation Process Management 16
+
+Solid Edge CAM Pro 16
+
+Symbolica 16
+
+Thermal / Flow 16
+
+Administration - General 13
+
+Installation and Configuration and Infrastructure - Installer Deploymentcenter 11
+
+TEM 11
+
+Business Modeler - Datamodel 10
+
+Service Lifecycle Management 10
+
+Video 10
+
+Client Framework - Rich Application Client RAC 9
+
+Indexing and Search - Search 9
+
+Microsoft Teams 9
+
+Product Configuration 9
+
+Teamcenter X 9
+
+Administration - Licensing 8
+
+Business Modeler - Utilities 8
+
+Installation and Configuration and Infrastructure - Update 8
+
+Teamcenter 8
+
+Administration - Organization 7
+
+Content and Document Management - Content Management 7
+
+Manufacturing - Process Planner (MPP/MSM/PMM/EWI) 7
+
+Administration - Authorization 6
+
+Indexing and Search - Querybuilder 6
+
+Installation and Configuration and Infrastructure - Security 6
+
+Integrations Other 6
+
+Siemens Xcelerator Admin Console 6
+
+Solutions and Functions - Configurator 6
+
+Client Framework - Office Client 5
+
+File Management System FMS Core - Configuration 5
+
+File Management System FMS Core - Data Share Manager 5
+
+Getting Started 5
+
+Installation and Configuration and Infrastructure - Dispatcher 5
+
+Installation and Configuration and Infrastructure - License Manager 5
+
+Sharing Data - PLMXML, TCXML 5
+
+Teamcenter X - Managed Service CAPS 5
+
+Teamcenter X Marketing 5
+
+Administration - Subscription Notification and Mail 4
+
+Core Functions - Preferences 4
+
+File Management System FMS Core - File Client Cache FCC 4
+
+Industry Solutions and Functions - PLM Easy 4
+
+Installation and Configuration and Infrastructure - Dispatcher Translators 4
+
+Installation and Configuration and Infrastructure - Infrastructure 4
+
+Installation and Configuration and Infrastructure - SOA WEB Framework 4
+
+Installation and Configuration and Infrastructure - Upgrade 4
+
+Manufacturing - General 4
+
+Medical Device 4
+
+Sharing Data - Multisite 4
+
+Business Modeler - General 3
+
+Compliance and Material Management 3
+
+Content and Document Management - Office 3
+
+Core Functions - POM 3
+
+Documentation and Learning - Documentation 3
+
+Engineering Process Management - Integration for CAD Other 3
+
+File Management System FMS Core - General 3
+
+Installation and Configuration and Infrastructure - Documentationserver and Help 3
+
+Installation and Configuration and Infrastructure - INSWEB 3
+
+Installation and Configuration and Infrastructure - Integrations 3
+
+Integrations Other - MENDIX 3
+
+Lifecycle Visualization - Standalone Managed Mode 3
+
+Manufacturing - Next Generation Planning NGP 3
+
+Self Admin 3
+
+Semiconductor Lifecycle Management 3
+
+Service Lifecycle Management - As-Built Management User 3
+
+Service Lifecycle Management - General 3
+
+Service Lifecycle Management - SLM Integr. For Service Asset Mgmt Maximo Integr. 3
+
+Service Lifecycle Management - Service Asset Management 3
+
+Service Lifecycle Management - Service Engineer 3
+
+Service Lifecycle Management - Service Forecasting 3
+
+Service Lifecycle Management - Service Planner 3
+
+Sharing Data - AIE Remote Manager 3
+
+Sharing Data - Briefcase 3
+
+Simulation 3
+
+Site Consolidation - Site Consolidation 3
+
+Solutions and Functions - Reports 3
+
+Solutions and Functions - Teamcenter Simulation 3
+
+Systems Engineering and Requirements and MBSE - MBSE 3
+
+Teams App – Product 3
+
+User Module 3
+
+Visualization 3
+
+Access & Login 2
+
+Administration - Data Transfer 2
+
+Administration Module 2
+
+Business Modeler - Deploy 2
+
+ECAD Integrations 2
+
+Industry Solutions and Functions - Machine Builder 2
+
+Integrations Other - BCT 2
+
+Integrations Other - SHOP_FLOOR 2
+
+Integrations Other - VARIANT_MATRIX 2
+
+Login 2
+
+Managing Admin/Users 2
+
+Mechatronics Process Management - MM Gateway 2
+
+Process and Program Management 2
+
+Program Management 2
+
+Quality 2
+
+Service Lifecycle Management - Licensing 2
+
+Sharing Data - Application Integration Gateway / T4x 2
+
+Sharing Data - Framework TCIF 2
+
+Sharing Data - Global Services 2
+
+Sharing Data - Teamcenter Share 2
+
+Solutions and Functions - Project 2
+
+System Administration 2
+
+Systems Engineering and Requirements and MBSE - Requirements Office 2
+
+Systems Engineering and Requirements and MBSE - Systems Engineering 2
+
+Teamcenter Deployment 2
+
+Teams App – Configuration 2
+
+Teams App – Outage 2
+
+ALL 1
+
+Access Manager 1
+
+Application Lifecycle 1
+
+Assembly 1
+
+Assign User 1
+
+Audit and Assessment 1
+
+BOM Management 1
+
+C-POST 1
+
+Configuration Request 1
+
+Content and Document Management - Rapid Data Converter 1
+
+DMADMIN 1
+
+Diagramming 1
+
+Document 1
+
+EDA Training 1
+
+G-POST 1
+
+GNC Setup 1
+
+Generative Machining 1
+
+Harness Design 1
+
+Import/Export Package File 1
+
+Installation & Environment 1
+
+JT 1
+
+Library Access 1
+
+MBSE 1
+
+Material Mass Calculator 1
+
+Mechanism Simulation 1
+
+Meshing 1
+
+Microservice Framework 1
+
+Migration and Data Management 1
+
+Model File Access 1
+
+Model Solution 1
+
+MoldFlow 1
+
+NX 1
+
+NX Advanced Designer 1
+
+NX CAD 1
+
+NX CAM 1
+
+NX Connector 1
+
+NX Core Designer 1
+
+NX Drafting & Layout 1
+
+NX Mach 1 1
+
+NX Mach 2 1
+
+NX Mach 3 1
+
+NX Mold Connect 1
+
+NX Mold Designer 1
+
+NX Scan to Part 1
+
+NX VSA Stackup 1
+
+NX Value Based Licensing Tokens 1
+
+NX X 1
+
+Office Interface 1
+
+Open I-deas 1
+
+Outage 1
+
+Part Manufacturing 1
+
+Part Manufacturing - 3rd Party Part Mfg Integration 1
+
+Part Manufacturing - NX Part Manufacturing Integration 1
+
+Part Manufacturing - Resource Management (MRL) 1
+
+Part Manufacturing - Shop Floor Connect Machine Client 1
+
+Part Manufacturing - Shop Floor Connect Resource Tracker 1
+
+Post Processing 1
+
+Project Configuration 1
+
+Project/Program Execution Mgmt 1
+
+Quality Issue Management 1
+
+RapidAuthor 1
+
+Read/Write Archive 1
+
+Response Analysis 1
+
+Self Paced Course 1
+
+Semiconductor-Foundation 1
+
+Semiconductor-IC Design 1
+
+Semiconductor-IC Manufacturing 1
+
+Semiconductor-Methodics Integration 1
+
+Semiconductor-NPI 1
+
+Siemens License Server 1
+
+Siemens Xcelerator Academy 1
+
+Simulation Management 1
+
+Structure Designer 1
+
+Supplier Management 1
+
+System Modeling Workbench 1
+
+TMG 1
+
+TcX, Self Admin, Checkin, Checkout, Cancel Checkout, Transfer Checkout 1
+
+Teamcenter X Lite 1
+
+Training and Qualification 1
+
+Translators for Design 1
+
+Translators for Simulation 1
+
+Visualization Interoperability 1
+
+Workflow 1
+Components
+
+Product Usage 526
+
+241102134 445
+
+203463479 437
+
+261322281 433
+
+Quality Project Management 430
+
+295938191 430
+
+Security and Access 21
+
+Operational Infrastructure 18
+
+Application Configuration Requests 17
+
+Quality Issue Management 15
