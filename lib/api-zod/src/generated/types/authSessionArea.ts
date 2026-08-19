@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type LoginResponseArea = typeof LoginResponseArea[keyof typeof LoginResponseArea];
+export type AuthSessionArea = typeof AuthSessionArea[keyof typeof AuthSessionArea];
 
 
-export const LoginResponseArea = {
+export const AuthSessionArea = {
   assistant: 'assistant',
   admin: 'admin',
 } as const;

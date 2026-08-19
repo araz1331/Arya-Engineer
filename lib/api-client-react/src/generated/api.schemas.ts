@@ -22,17 +22,17 @@ export interface LoginInput {
   area: LoginInputArea;
 }
 
-export type LoginResponseArea = typeof LoginResponseArea[keyof typeof LoginResponseArea];
+export type AuthSessionArea = typeof AuthSessionArea[keyof typeof AuthSessionArea];
 
 
-export const LoginResponseArea = {
+export const AuthSessionArea = {
   assistant: 'assistant',
   admin: 'admin',
 } as const;
 
-export interface LoginResponse {
+export interface AuthSession {
   authenticated: boolean;
-  area: LoginResponseArea;
+  area: AuthSessionArea;
 }
 
 export interface HealthStatus {

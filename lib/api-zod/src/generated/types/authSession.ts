@@ -5,9 +5,9 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { LoginResponseArea } from './loginResponseArea';
+import type { AuthSessionArea } from './authSessionArea';
 
-export interface LoginResponse {
+export interface AuthSession {
   authenticated: boolean;
-  area: LoginResponseArea;
+  area: AuthSessionArea;
 }

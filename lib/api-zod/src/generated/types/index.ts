@@ -9,6 +9,8 @@
 export * from './article';
 export * from './articleCount';
 export * from './articleInput';
+export * from './authSession';
+export * from './authSessionArea';
 export * from './bulkArticleImportArray';
 export * from './bulkArticleImportInput';
 export * from './bulkImportResponse';
@@ -22,8 +24,6 @@ export * from './knowledgeStats';
 export * from './listArticlesParams';
 export * from './loginInput';
 export * from './loginInputArea';
-export * from './loginResponse';
-export * from './loginResponseArea';
 export * from './pdfArticleInput';
 export * from './scrapeDebug';
 export * from './scrapeDebugResponseHeaders';

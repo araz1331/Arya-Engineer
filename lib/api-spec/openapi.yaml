@@ -32,7 +32,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LoginResponse"
+                $ref: "#/components/schemas/AuthSession"
   /healthz:
     get:
       operationId: healthCheck
@@ -248,7 +248,7 @@ components:
         area:
           type: string
           enum: [assistant, admin]
-    LoginResponse:
+    AuthSession:
       type: object
       required: [authenticated, area]
       properties:

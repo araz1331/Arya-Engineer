@@ -23,6 +23,7 @@ import type {
   Article,
   ArticleCount,
   ArticleInput,
+  AuthSession,
   BulkArticleImportArray,
   BulkArticleImportInput,
   BulkImportResponse,
@@ -32,7 +33,6 @@ import type {
   KnowledgeStats,
   ListArticlesParams,
   LoginInput,
-  LoginResponse,
   PdfArticleInput,
   ScrapeDebug,
   ScrapeStatus,
@@ -78,9 +78,9 @@ export const getLoginUrl = () => {
 /**
  * @summary Verify a shared assistant or admin password
  */
-export const login = async (loginInput: LoginInput, options?: Parameters<typeof customFetch>[1]): Promise<LoginResponse> => {
+export const login = async (loginInput: LoginInput, options?: Parameters<typeof customFetch>[1]): Promise<AuthSession> => {
 
-  return customFetch<LoginResponse>(getLoginUrl(),
+  return customFetch<AuthSession>(getLoginUrl(),
   {
     ...options,
     method: 'POST',
