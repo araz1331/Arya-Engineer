@@ -5,6 +5,36 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type LoginInputArea = typeof LoginInputArea[keyof typeof LoginInputArea];
+
+
+export const LoginInputArea = {
+  assistant: 'assistant',
+  admin: 'admin',
+} as const;
+
+export interface LoginInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  password: string;
+  area: LoginInputArea;
+}
+
+export type LoginResponseArea = typeof LoginResponseArea[keyof typeof LoginResponseArea];
+
+
+export const LoginResponseArea = {
+  assistant: 'assistant',
+  admin: 'admin',
+} as const;
+
+export interface LoginResponse {
+  authenticated: boolean;
+  area: LoginResponseArea;
+}
+
 export interface HealthStatus {
   status: string;
 }

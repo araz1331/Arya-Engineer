@@ -9,6 +9,24 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Verify a shared assistant or admin password
+ */
+export const loginBodyPasswordMax = 200;
+
+
+
+export const LoginBody = zod.object({
+  "password": zod.string().min(1).max(loginBodyPasswordMax),
+  "area": zod.enum(['assistant', 'admin'])
+})
+
+export const LoginResponse = zod.object({
+  "authenticated": zod.boolean(),
+  "area": zod.enum(['assistant', 'admin'])
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */
