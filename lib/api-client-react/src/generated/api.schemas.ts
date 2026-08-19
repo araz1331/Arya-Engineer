@@ -19,6 +19,75 @@ export interface Article {
   /** @nullable */
   url: string | null;
   scrapedAt: string;
+  /** @nullable */
+  sourceUpdatedAt: string | null;
+}
+
+export interface ArticleInput {
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 1000000
+     */
+  content: string;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  category?: string | null;
+  /**
+     * @maxItems 50
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  tags: string[];
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  url?: string | null;
+}
+
+export interface PdfArticleInput {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  filename: string;
+  /** Base64-encoded PDF bytes without the data URL prefix */
+  data: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  title?: string | null;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  category?: string | null;
+  /**
+     * @maxItems 50
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  tags?: string[];
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  url?: string | null;
+}
+
+export interface BulkImportResponse {
+  imported: number;
+  skipped: number;
+  errors: string[];
+  articles: Article[];
 }
 
 export interface CategoryCount {
@@ -85,6 +154,14 @@ export const ScrapeStatusStatus = {
   error: 'error',
 } as const;
 
+export type ScrapeStatusPhase = typeof ScrapeStatusPhase[keyof typeof ScrapeStatusPhase];
+
+
+export const ScrapeStatusPhase = {
+  discover: 'discover',
+  content: 'content',
+} as const;
+
 export interface ScrapeStatus {
   status: ScrapeStatusStatus;
   currentPage: number;
@@ -94,6 +171,7 @@ export interface ScrapeStatus {
   lastRun: string | null;
   /** @nullable */
   lastError: string | null;
+  phase: ScrapeStatusPhase;
 }
 
 export type ScrapeDebugResponseHeaders = {[key: string]: string};

@@ -67,5 +67,6 @@ export function toArticleResponse(article: typeof articlesTable.$inferSelect) {
     tags: article.tags ?? [],
     url: article.url,
     scrapedAt: article.scrapedAt,
+    sourceUpdatedAt: article.sourceUpdatedAt,
   };
 }

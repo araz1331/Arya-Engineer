@@ -21,11 +21,14 @@ import type {
 
 import type {
   Article,
+  ArticleInput,
+  BulkImportResponse,
   ChatInput,
   ChatReply,
   HealthStatus,
   KnowledgeStats,
   ListArticlesParams,
+  PdfArticleInput,
   ScrapeDebug,
   ScrapeStatus
 } from './api.schemas';
@@ -295,6 +298,219 @@ export function useListArticles<TData = Awaited<ReturnType<typeof listArticles>>
 
 
 
+
+export const getCreateArticleUrl = () => {
+
+
+
+
+  return `/api/articles`
+}
+
+/**
+ * @summary Add a knowledge article manually
+ */
+export const createArticle = async (articleInput: ArticleInput, options?: Parameters<typeof customFetch>[1]): Promise<Article> => {
+
+  return customFetch<Article>(getCreateArticleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(articleInput)
+  }
+);}
+
+
+
+
+
+export const getCreateArticleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createArticle>>, TError,{data: BodyType<ArticleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createArticle>>, TError,{data: BodyType<ArticleInput>}, TContext> => {
+
+const mutationKey = ['createArticle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createArticle>>, {data: BodyType<ArticleInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createArticle(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateArticleMutationResult = NonNullable<Awaited<ReturnType<typeof createArticle>>>
+    export type CreateArticleMutationBody = BodyType<ArticleInput>
+    export type CreateArticleMutationError = ErrorType<void>
+
+    /**
+ * @summary Add a knowledge article manually
+ */
+export const useCreateArticle = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createArticle>>, TError,{data: BodyType<ArticleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createArticle>>,
+        TError,
+        {data: BodyType<ArticleInput>},
+        TContext
+      > => {
+      return useMutation(getCreateArticleMutationOptions(options));
+    }
+
+export const getImportPdfArticleUrl = () => {
+
+
+
+
+  return `/api/articles/pdf`
+}
+
+/**
+ * @summary Extract and save a PDF as a knowledge article
+ */
+export const importPdfArticle = async (pdfArticleInput: PdfArticleInput, options?: Parameters<typeof customFetch>[1]): Promise<Article> => {
+
+  return customFetch<Article>(getImportPdfArticleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pdfArticleInput)
+  }
+);}
+
+
+
+
+
+export const getImportPdfArticleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importPdfArticle>>, TError,{data: BodyType<PdfArticleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importPdfArticle>>, TError,{data: BodyType<PdfArticleInput>}, TContext> => {
+
+const mutationKey = ['importPdfArticle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importPdfArticle>>, {data: BodyType<PdfArticleInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  importPdfArticle(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportPdfArticleMutationResult = NonNullable<Awaited<ReturnType<typeof importPdfArticle>>>
+    export type ImportPdfArticleMutationBody = BodyType<PdfArticleInput>
+    export type ImportPdfArticleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Extract and save a PDF as a knowledge article
+ */
+export const useImportPdfArticle = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importPdfArticle>>, TError,{data: BodyType<PdfArticleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importPdfArticle>>,
+        TError,
+        {data: BodyType<PdfArticleInput>},
+        TContext
+      > => {
+      return useMutation(getImportPdfArticleMutationOptions(options));
+    }
+
+export const getBulkImportArticlesUrl = () => {
+
+
+
+
+  return `/api/articles/bulk`
+}
+
+/**
+ * @summary Import a JSON array of knowledge articles
+ */
+export const bulkImportArticles = async (articleInput: ArticleInput[], options?: Parameters<typeof customFetch>[1]): Promise<BulkImportResponse> => {
+
+  return customFetch<BulkImportResponse>(getBulkImportArticlesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(articleInput)
+  }
+);}
+
+
+
+
+
+export const getBulkImportArticlesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<ArticleInput[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<ArticleInput[]>}, TContext> => {
+
+const mutationKey = ['bulkImportArticles'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkImportArticles>>, {data: BodyType<ArticleInput[]>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkImportArticles(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkImportArticlesMutationResult = NonNullable<Awaited<ReturnType<typeof bulkImportArticles>>>
+    export type BulkImportArticlesMutationBody = BodyType<ArticleInput[]>
+    export type BulkImportArticlesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Import a JSON array of knowledge articles
+ */
+export const useBulkImportArticles = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<ArticleInput[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkImportArticles>>,
+        TError,
+        {data: BodyType<ArticleInput[]>},
+        TContext
+      > => {
+      return useMutation(getBulkImportArticlesMutationOptions(options));
+    }
 
 export const getChatUrl = () => {
 

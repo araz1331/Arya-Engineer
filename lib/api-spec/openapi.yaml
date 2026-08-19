@@ -68,6 +68,64 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Article"
+    post:
+      operationId: createArticle
+      tags: [knowledge]
+      summary: Add a knowledge article manually
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArticleInput"
+      responses:
+        "201":
+          description: Article created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "409":
+          description: An article with the same URL already exists
+  /articles/pdf:
+    post:
+      operationId: importPdfArticle
+      tags: [knowledge]
+      summary: Extract and save a PDF as a knowledge article
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PdfArticleInput"
+      responses:
+        "201":
+          description: PDF article created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+  /articles/bulk:
+    post:
+      operationId: bulkImportArticles
+      tags: [knowledge]
+      summary: Import a JSON array of knowledge articles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              maxItems: 500
+              items:
+                $ref: "#/components/schemas/ArticleInput"
+      responses:
+        "201":
+          description: Bulk import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkImportResponse"
   /chat:
     post:
       operationId: chat
@@ -133,7 +191,7 @@ components:
         - status
     Article:
       type: object
-      required: [id, title, content, category, tags, url, scrapedAt]
+      required: [id, title, content, category, tags, url, scrapedAt, sourceUpdatedAt]
       properties:
         id: { type: number }
         title: { type: string }
@@ -144,6 +202,47 @@ components:
           items: { type: string }
         url: { type: ["string", "null"] }
         scrapedAt: { type: string, format: date-time }
+        sourceUpdatedAt: { type: ["string", "null"], format: date-time }
+    ArticleInput:
+      type: object
+      required: [title, content, tags]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 500 }
+        content: { type: string, minLength: 1, maxLength: 1000000 }
+        category: { type: ["string", "null"], maxLength: 120 }
+        tags:
+          type: array
+          maxItems: 50
+          items: { type: string, minLength: 1, maxLength: 80 }
+        url: { type: ["string", "null"], maxLength: 2000 }
+    PdfArticleInput:
+      type: object
+      required: [filename, data]
+      properties:
+        filename: { type: string, minLength: 1, maxLength: 255 }
+        data:
+          type: string
+          description: Base64-encoded PDF bytes without the data URL prefix
+        title: { type: ["string", "null"], maxLength: 500 }
+        category: { type: ["string", "null"], maxLength: 120 }
+        tags:
+          type: array
+          maxItems: 50
+          items: { type: string, minLength: 1, maxLength: 80 }
+        url: { type: ["string", "null"], maxLength: 2000 }
+    BulkImportResponse:
+      type: object
+      required: [imported, skipped, errors, articles]
+      properties:
+        imported: { type: number }
+        skipped: { type: number }
+        errors:
+          type: array
+          items: { type: string }
+        articles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Article"
     KnowledgeStats:
       type: object
       required: [totalArticles, indexedArticles, lastScraped, categories]
@@ -194,7 +293,7 @@ components:
         sessionId: { type: string }
     ScrapeStatus:
       type: object
-      required: [status, currentPage, totalPages, articlesScraped, lastRun, lastError]
+      required: [status, currentPage, totalPages, articlesScraped, lastRun, lastError, phase]
       properties:
         status:
           type: string
@@ -204,6 +303,9 @@ components:
         articlesScraped: { type: number }
         lastRun: { type: ["string", "null"], format: date-time }
         lastError: { type: ["string", "null"] }
+        phase:
+          type: string
+          enum: [discover, content]
     ScrapeDebug:
       type: object
       required: [statusCode, responseHeaders, bodyPreview]

@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ScrapeStatusPhase } from './scrapeStatusPhase';
 import type { ScrapeStatusStatus } from './scrapeStatusStatus';
 
 export interface ScrapeStatus {
@@ -16,4 +17,5 @@ export interface ScrapeStatus {
   lastRun: Date | null;
   /** @nullable */
   lastError: string | null;
+  phase: ScrapeStatusPhase;
 }

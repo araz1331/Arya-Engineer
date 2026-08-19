@@ -22,6 +22,7 @@ import {
   PanelLeftOpen,
   Paperclip,
   Play,
+  Save,
   RefreshCw,
   Search,
   Send,
@@ -29,6 +30,7 @@ import {
   ShieldCheck,
   Sparkles,
   Terminal,
+  Upload,
   X,
   Zap,
 } from 'lucide-react';
@@ -39,10 +41,13 @@ import {
   getHealthCheckQueryKey,
   getListArticlesQueryKey,
   useChat,
+  useCreateArticle,
+  useBulkImportArticles,
   useDebugScrape,
   useGetScrapeStatus,
   useGetStats,
   useHealthCheck,
+  useImportPdfArticle,
   useListArticles,
   useStartScrape,
 } from '@workspace/api-client-react';
@@ -261,6 +266,130 @@ function HomePage() {
   );
 }
 
+const articleCategories = ['Administration', 'Configuration', 'Troubleshooting', 'Installation', 'Integration', 'Development', 'Other'];
+
+function CorpusIngestion({ onRefresh }: { onRefresh: () => void }) {
+  const [form, setForm] = useState({ title: '', content: '', category: 'Troubleshooting', tags: '', url: '' });
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const jsonInputRef = useRef<HTMLInputElement>(null);
+  const createArticle = useCreateArticle();
+  const importPdf = useImportPdfArticle();
+  const bulkImport = useBulkImportArticles();
+
+  const showError = (error: unknown) => {
+    const message = error instanceof Error ? error.message : 'The import could not be completed.';
+    setNotice({ type: 'error', text: message });
+  };
+  const saveArticle = (event: FormEvent) => {
+    event.preventDefault();
+    setNotice(null);
+    createArticle.mutate({ data: {
+      title: form.title.trim(),
+      content: form.content.trim(),
+      category: form.category || null,
+      tags: form.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+      url: form.url.trim() || null,
+    } }, {
+      onSuccess: () => {
+        setForm({ title: '', content: '', category: 'Troubleshooting', tags: '', url: '' });
+        setNotice({ type: 'success', text: 'Article added to the corpus.' });
+        onRefresh();
+      },
+      onError: showError,
+    });
+  };
+  const uploadPdf = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setNotice({ type: 'error', text: 'Please choose a PDF file.' });
+      return;
+    }
+    if (file.size > 18 * 1024 * 1024) {
+      setNotice({ type: 'error', text: 'PDF files must be smaller than 18 MB.' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const [, data] = String(reader.result ?? '').split(',');
+      if (!data) {
+        setNotice({ type: 'error', text: 'The PDF could not be read.' });
+        return;
+      }
+      setNotice(null);
+      importPdf.mutate({ data: {
+        filename: file.name,
+        data,
+        title: null,
+        category: 'Imported PDF',
+        tags: [],
+        url: null,
+      } }, {
+        onSuccess: (article) => {
+          setNotice({ type: 'success', text: `Imported “${article.title}” from PDF.` });
+          onRefresh();
+        },
+        onError: showError,
+      });
+    };
+    reader.onerror = () => setNotice({ type: 'error', text: 'The PDF could not be read.' });
+    reader.readAsDataURL(file);
+  };
+  const uploadJson = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setNotice({ type: 'error', text: 'JSON files must be smaller than 5 MB.' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result ?? ''));
+        if (!Array.isArray(parsed)) throw new Error('JSON must contain an array of articles.');
+        bulkImport.mutate({ data: parsed }, {
+          onSuccess: (result) => {
+            setNotice({ type: result.errors.length ? 'error' : 'success', text: `Imported ${result.imported} article${result.imported === 1 ? '' : 's'}; skipped ${result.skipped}.${result.errors.length ? ` ${result.errors[0]}` : ''}` });
+            onRefresh();
+          },
+          onError: showError,
+        });
+      } catch (error) {
+        showError(error);
+      }
+    };
+    reader.onerror = () => setNotice({ type: 'error', text: 'The JSON file could not be read.' });
+    reader.readAsText(file);
+  };
+  const busy = createArticle.isPending || importPdf.isPending || bulkImport.isPending;
+
+  return (
+    <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
+      <div className="flex flex-col justify-between gap-3 border-b border-border/80 pb-5 md:flex-row md:items-center">
+        <div><div className="flex items-center gap-2"><Upload className="h-4 w-4 text-primary" /><h2 className="text-sm font-extrabold">Add knowledge</h2></div><p className="mt-1 text-[11px] text-muted-foreground">Import Teamcenter documentation without the GTAC crawler.</p></div>
+        <div className="flex flex-wrap gap-2">
+          <input ref={pdfInputRef} type="file" accept=".pdf,application/pdf" onChange={uploadPdf} className="hidden" data-testid="input-upload-pdf" />
+          <button type="button" onClick={() => pdfInputRef.current?.click()} disabled={busy} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[11px] font-bold text-slate-700 hover:border-primary/40 hover:bg-cyan-50 disabled:opacity-50" data-testid="button-upload-pdf"><FileText className="h-3.5 w-3.5 text-primary" /> Upload PDF</button>
+          <input ref={jsonInputRef} type="file" accept=".json,application/json" onChange={uploadJson} className="hidden" data-testid="input-upload-json" />
+          <button type="button" onClick={() => jsonInputRef.current?.click()} disabled={busy} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[11px] font-bold text-slate-700 hover:border-primary/40 hover:bg-cyan-50 disabled:opacity-50" data-testid="button-upload-json"><Terminal className="h-3.5 w-3.5 text-primary" /> Bulk JSON</button>
+        </div>
+      </div>
+      {notice && <div className={cn('mt-4 rounded-lg border px-3 py-2 text-xs font-semibold', notice.type === 'success' ? 'border-lime-200 bg-lime-50 text-lime-800' : 'border-red-200 bg-red-50 text-red-800')} data-testid={`ingestion-${notice.type}`}>{notice.text}</div>}
+      <form onSubmit={saveArticle} className="mt-5 grid gap-4 md:grid-cols-2">
+        <label className="text-xs font-bold text-slate-700">Title<input required maxLength={500} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Teamcenter article title" className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background px-3 text-xs font-normal outline-none focus:border-primary" data-testid="input-article-title" /></label>
+        <label className="text-xs font-bold text-slate-700">Category<select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background px-3 text-xs font-normal outline-none focus:border-primary" data-testid="select-article-category">{articleCategories.map((category) => <option key={category}>{category}</option>)}</select></label>
+        <label className="text-xs font-bold text-slate-700 md:col-span-2">Content<textarea required maxLength={1000000} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} placeholder="Paste the complete Teamcenter documentation or solution text…" rows={7} className="mt-1.5 w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-xs font-normal leading-5 outline-none focus:border-primary" data-testid="textarea-article-content" /></label>
+        <label className="text-xs font-bold text-slate-700">Tags<span className="ml-1 font-normal text-muted-foreground">(comma separated)</span><input value={form.tags} onChange={(event) => setForm({ ...form, tags: event.target.value })} placeholder="BMIDE, deployment, data model" className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background px-3 text-xs font-normal outline-none focus:border-primary" data-testid="input-article-tags" /></label>
+        <label className="text-xs font-bold text-slate-700">Source URL<span className="ml-1 font-normal text-muted-foreground">(optional)</span><input value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} placeholder="https://support.sw.siemens.com/…" className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background px-3 text-xs font-normal outline-none focus:border-primary" data-testid="input-article-url" /></label>
+        <div className="flex justify-end md:col-span-2"><button type="submit" disabled={busy || !form.title.trim() || !form.content.trim()} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-xs font-extrabold text-white hover:bg-slate-950 disabled:cursor-not-allowed disabled:opacity-50" data-testid="button-save-article"><Save className="h-3.5 w-3.5" /> {createArticle.isPending ? 'Saving…' : 'Save article'}</button></div>
+      </form>
+    </section>
+  );
+}
+
 function AdminPage() {
   const [search, setSearch] = useState('');
   const [searchDraft, setSearchDraft] = useState('');
@@ -281,8 +410,9 @@ function AdminPage() {
   return (
     <div className="min-h-[calc(100dvh-4rem)] bg-background px-4 pb-14 md:px-8 md:pb-16">
       <div className="mx-auto max-w-[1280px]">
-        <section className="animate-rise flex flex-col justify-between gap-5 border-b border-border/80 pb-8 pt-9 md:flex-row md:items-end md:pt-12"><div><div className="eyebrow mb-4 flex items-center gap-2 text-primary"><Terminal className="h-3.5 w-3.5" /> Corpus control / 02</div><h1 className="font-display text-4xl font-bold tracking-[-.04em] text-slate-950 md:text-5xl">Index health, at a glance.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Monitor the GTAC collection, trigger a crawl, and search the exact material available to the assistant.</p></div><button type="button" onClick={startIndex} disabled={startScrape.isPending || status?.status === 'running'} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-extrabold text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-950 disabled:cursor-not-allowed disabled:opacity-50" data-testid="button-start-scrape">{startScrape.isPending || status?.status === 'running' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}{status?.status === 'running' ? 'Indexing in progress' : 'Start index run'}</button></section>
+         <section className="animate-rise flex flex-col justify-between gap-5 border-b border-border/80 pb-8 pt-9 md:flex-row md:items-end md:pt-12"><div><div className="eyebrow mb-4 flex items-center gap-2 text-primary"><Terminal className="h-3.5 w-3.5" /> Corpus control / 02</div><h1 className="font-display text-4xl font-bold tracking-[-.04em] text-slate-950 md:text-5xl">Index health, at a glance.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Monitor the GTAC collection, add documentation manually, and search the exact material available to the assistant.</p></div><button type="button" onClick={startIndex} disabled={startScrape.isPending || status?.status === 'running'} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-extrabold text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-950 disabled:cursor-not-allowed disabled:opacity-50" data-testid="button-start-scrape">{startScrape.isPending || status?.status === 'running' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}{status?.status === 'running' ? 'Indexing in progress' : 'Start index run'}</button></section>
         {startScrape.isError && <div className="mt-5"><QueryError message="The scraper could not be started. Check the API service and try again." retry={startIndex} /></div>}
+         <CorpusIngestion onRefresh={() => { client.invalidateQueries({ queryKey: getListArticlesQueryKey(params) }); client.invalidateQueries({ queryKey: getGetStatsQueryKey() }); }} />
         <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Total discovered" value={stats.isLoading ? null : stats.data?.totalArticles} icon={FileText} note="Articles known to crawler" />
           <StatCard label="Indexed for answers" value={stats.isLoading ? null : stats.data?.indexedArticles} icon={Database} note="Available to RAG assistant" accent />

@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
 import { count, desc } from "drizzle-orm";
+import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { ai } from "@workspace/integrations-gemini-ai";
 import { db, articlesTable, scraperProgressTable } from "@workspace/db";
-import { ChatBody, ChatResponse, DebugScrapeResponse, GetStatsResponse, ListArticlesQueryParams, ListArticlesResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
+import { BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, DebugScrapeResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
 import { getArticleList, searchArticles, ensureStarterArticles, toArticleResponse } from "../lib/knowledge";
 import { debugScrape, getScraperStatus, runScraper } from "../lib/scraper";
 
@@ -29,6 +30,100 @@ router.get("/articles", async (req, res): Promise<void> => {
   }
   const rows = await getArticleList(parsed.data.search, parsed.data.limit);
   res.json(ListArticlesResponse.parse(rows.map(toArticleResponse)));
+});
+
+router.post("/articles", async (req, res): Promise<void> => {
+  const parsed = CreateArticleBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [article] = await db.insert(articlesTable).values({
+    title: parsed.data.title.trim(),
+    content: parsed.data.content.trim(),
+    category: parsed.data.category?.trim() || null,
+    tags: parsed.data.tags.map((tag) => tag.trim()).filter(Boolean),
+    url: parsed.data.url?.trim() || null,
+  }).onConflictDoNothing({ target: articlesTable.url }).returning();
+  if (!article) {
+    res.status(409).json({ error: "An article with this URL already exists." });
+    return;
+  }
+  res.status(201).json(CreateArticleResponse.parse(toArticleResponse(article)));
+});
+
+router.post("/articles/pdf", async (req, res): Promise<void> => {
+  const parsed = ImportPdfArticleBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  if (!parsed.data.filename.toLowerCase().endsWith(".pdf")) {
+    res.status(400).json({ error: "Only PDF files are supported." });
+    return;
+  }
+  let content = "";
+  try {
+    GlobalWorkerOptions.workerSrc = new URL("../node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs", import.meta.url).href;
+    const document = await getDocument({ data: new Uint8Array(Buffer.from(parsed.data.data, "base64")), useSystemFonts: true }).promise;
+    const pages: string[] = [];
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const text = await page.getTextContent();
+      pages.push(text.items.map((item) => ("str" in item ? item.str : "")).join(" "));
+      page.cleanup();
+    }
+    await document.cleanup();
+    content = pages.join("\n").replace(/\s+/g, " ").trim();
+  } catch (error) {
+    res.status(400).json({ error: `Could not extract PDF text: ${error instanceof Error ? error.message : String(error)}` });
+    return;
+  }
+  if (content.length < 20) {
+    res.status(400).json({ error: "The PDF did not contain enough selectable text. Scanned PDFs are not supported." });
+    return;
+  }
+  const [article] = await db.insert(articlesTable).values({
+    title: parsed.data.title?.trim() || parsed.data.filename.replace(/\.pdf$/i, ""),
+    content: content.slice(0, 1000000),
+    category: parsed.data.category?.trim() || "Imported PDF",
+    tags: parsed.data.tags?.map((tag) => tag.trim()).filter(Boolean) ?? [],
+    url: parsed.data.url?.trim() || null,
+  }).onConflictDoNothing({ target: articlesTable.url }).returning();
+  if (!article) {
+    res.status(409).json({ error: "An article with this URL already exists." });
+    return;
+  }
+  res.status(201).json(ImportPdfArticleResponse.parse(toArticleResponse(article)));
+});
+
+router.post("/articles/bulk", async (req, res): Promise<void> => {
+  const parsed = BulkImportArticlesBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const imported: Array<typeof articlesTable.$inferSelect> = [];
+  const errors: string[] = [];
+  await db.transaction(async (tx) => {
+    for (const [index, item] of parsed.data.entries()) {
+      const [article] = await tx.insert(articlesTable).values({
+        title: item.title.trim(),
+        content: item.content.trim(),
+        category: item.category?.trim() || null,
+        tags: item.tags.map((tag) => tag.trim()).filter(Boolean),
+        url: item.url?.trim() || null,
+      }).onConflictDoNothing({ target: articlesTable.url }).returning();
+      if (article) imported.push(article);
+      else errors.push(`Item ${index + 1}: skipped because its URL already exists.`);
+    }
+  });
+  res.status(201).json(BulkImportArticlesResponse.parse({
+    imported: imported.length,
+    skipped: errors.length,
+    errors,
+    articles: imported.map(toArticleResponse),
+  }));
 });
 
 router.post("/chat", async (req, res): Promise<void> => {

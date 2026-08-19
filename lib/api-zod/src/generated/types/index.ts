@@ -7,6 +7,8 @@
  */
 
 export * from './article';
+export * from './articleInput';
+export * from './bulkImportResponse';
 export * from './categoryCount';
 export * from './chatInput';
 export * from './chatInputImageMimeType';
@@ -15,7 +17,9 @@ export * from './chatSource';
 export * from './healthStatus';
 export * from './knowledgeStats';
 export * from './listArticlesParams';
+export * from './pdfArticleInput';
 export * from './scrapeDebug';
 export * from './scrapeDebugResponseHeaders';
 export * from './scrapeStatus';
+export * from './scrapeStatusPhase';
 export * from './scrapeStatusStatus';

@@ -51,9 +51,128 @@ export const ListArticlesResponseItem = zod.object({
   "category": zod.string().nullable(),
   "tags": zod.array(zod.string()),
   "url": zod.string().nullable(),
-  "scrapedAt": zod.coerce.date()
+  "scrapedAt": zod.coerce.date(),
+  "sourceUpdatedAt": zod.coerce.date().nullable()
 })
 export const ListArticlesResponse = zod.array(ListArticlesResponseItem)
+
+
+/**
+ * @summary Add a knowledge article manually
+ */
+export const createArticleBodyTitleMax = 500;
+
+export const createArticleBodyContentMax = 1000000;
+
+export const createArticleBodyCategoryMax = 120;
+
+export const createArticleBodyTagsItemMax = 80;
+
+export const createArticleBodyTagsMax = 50;
+
+export const createArticleBodyUrlMax = 2000;
+
+
+
+export const CreateArticleBody = zod.object({
+  "title": zod.string().min(1).max(createArticleBodyTitleMax),
+  "content": zod.string().min(1).max(createArticleBodyContentMax),
+  "category": zod.string().max(createArticleBodyCategoryMax).nullish(),
+  "tags": zod.array(zod.string().min(1).max(createArticleBodyTagsItemMax)).max(createArticleBodyTagsMax),
+  "url": zod.string().max(createArticleBodyUrlMax).nullish()
+})
+
+export const CreateArticleResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "content": zod.string(),
+  "category": zod.string().nullable(),
+  "tags": zod.array(zod.string()),
+  "url": zod.string().nullable(),
+  "scrapedAt": zod.coerce.date(),
+  "sourceUpdatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Extract and save a PDF as a knowledge article
+ */
+export const importPdfArticleBodyFilenameMax = 255;
+
+export const importPdfArticleBodyTitleMax = 500;
+
+export const importPdfArticleBodyCategoryMax = 120;
+
+export const importPdfArticleBodyTagsItemMax = 80;
+
+export const importPdfArticleBodyTagsMax = 50;
+
+export const importPdfArticleBodyUrlMax = 2000;
+
+
+
+export const ImportPdfArticleBody = zod.object({
+  "filename": zod.string().min(1).max(importPdfArticleBodyFilenameMax),
+  "data": zod.string().describe('Base64-encoded PDF bytes without the data URL prefix'),
+  "title": zod.string().max(importPdfArticleBodyTitleMax).nullish(),
+  "category": zod.string().max(importPdfArticleBodyCategoryMax).nullish(),
+  "tags": zod.array(zod.string().min(1).max(importPdfArticleBodyTagsItemMax)).max(importPdfArticleBodyTagsMax).optional(),
+  "url": zod.string().max(importPdfArticleBodyUrlMax).nullish()
+})
+
+export const ImportPdfArticleResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "content": zod.string(),
+  "category": zod.string().nullable(),
+  "tags": zod.array(zod.string()),
+  "url": zod.string().nullable(),
+  "scrapedAt": zod.coerce.date(),
+  "sourceUpdatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Import a JSON array of knowledge articles
+ */
+export const bulkImportArticlesBodyTitleMax = 500;
+
+export const bulkImportArticlesBodyContentMax = 1000000;
+
+export const bulkImportArticlesBodyCategoryMax = 120;
+
+export const bulkImportArticlesBodyTagsItemMax = 80;
+
+export const bulkImportArticlesBodyTagsMax = 50;
+
+export const bulkImportArticlesBodyUrlMax = 2000;
+
+
+
+export const BulkImportArticlesBodyItem = zod.object({
+  "title": zod.string().min(1).max(bulkImportArticlesBodyTitleMax),
+  "content": zod.string().min(1).max(bulkImportArticlesBodyContentMax),
+  "category": zod.string().max(bulkImportArticlesBodyCategoryMax).nullish(),
+  "tags": zod.array(zod.string().min(1).max(bulkImportArticlesBodyTagsItemMax)).max(bulkImportArticlesBodyTagsMax),
+  "url": zod.string().max(bulkImportArticlesBodyUrlMax).nullish()
+})
+export const BulkImportArticlesBody = zod.array(BulkImportArticlesBodyItem).max(500)
+
+export const BulkImportArticlesResponse = zod.object({
+  "imported": zod.number(),
+  "skipped": zod.number(),
+  "errors": zod.array(zod.string()),
+  "articles": zod.array(zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "content": zod.string(),
+  "category": zod.string().nullable(),
+  "tags": zod.array(zod.string()),
+  "url": zod.string().nullable(),
+  "scrapedAt": zod.coerce.date(),
+  "sourceUpdatedAt": zod.coerce.date().nullable()
+}))
+})
 
 
 /**
@@ -91,7 +210,8 @@ export const StartScrapeResponse = zod.object({
   "totalPages": zod.number(),
   "articlesScraped": zod.number(),
   "lastRun": zod.coerce.date().nullable(),
-  "lastError": zod.string().nullable()
+  "lastError": zod.string().nullable(),
+  "phase": zod.enum(['discover', 'content'])
 })
 
 
@@ -104,7 +224,8 @@ export const GetScrapeStatusResponse = zod.object({
   "totalPages": zod.number(),
   "articlesScraped": zod.number(),
   "lastRun": zod.coerce.date().nullable(),
-  "lastError": zod.string().nullable()
+  "lastError": zod.string().nullable(),
+  "phase": zod.enum(['discover', 'content'])
 })
 
 
