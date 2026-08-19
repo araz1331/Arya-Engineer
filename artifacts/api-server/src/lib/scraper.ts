@@ -1,11 +1,27 @@
 import * as cheerio from "cheerio";
-import { count, eq } from "drizzle-orm";
+import { asc, count, eq, sql } from "drizzle-orm";
 import { db, articleUrlsTable, articlesTable, scraperProgressTable } from "@workspace/db";
 import { logger } from "./logger";
 
 const BASE_URL = "https://support.sw.siemens.com/en-US/product/272221135/knowledge-base";
 const TOTAL_PAGES = 45;
 const ARTICLE_URL = (id: string) => `${BASE_URL}/${id}`;
+const PRIORITY_CATEGORIES = [
+  "Installation & Upgrade",
+  "Getting Started",
+  "Administration - Tools and Utilities",
+  "Administration - Workflow",
+  "Core Functions - Client",
+  "Active Workspace - Client Framework",
+  "Active Workspace - Client Configuration",
+  "Problem/Defect",
+  "Programming and Customization",
+] as const;
+const SKIPPED_CATEGORIES = [
+  "Engineering Process Management - Integration for CATIA",
+  "Service Lifecycle Management",
+  "Machine Builders",
+] as const;
 let activeRun = false;
 
 function parseCurl(curl: string | undefined): Record<string, string> {
@@ -66,14 +82,72 @@ function extractArticleIds(html: string): string[] {
   return [...ids];
 }
 
+function normalizeCategory(value: string): string {
+  return value.toLowerCase().replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
+}
+
+function categoryDetails(value: string | undefined) {
+  if (!value) return { category: null, priority: 999, skipped: false };
+  const normalized = normalizeCategory(value);
+  const category = [...PRIORITY_CATEGORIES, ...SKIPPED_CATEGORIES].find((candidate) =>
+    normalized.includes(normalizeCategory(candidate)),
+  ) ?? null;
+  if (!category) return { category: null, priority: 999, skipped: false };
+  const priorityIndex = PRIORITY_CATEGORIES.indexOf(category as (typeof PRIORITY_CATEGORIES)[number]);
+  return {
+    category,
+    priority: priorityIndex === -1 ? 1000 : priorityIndex + 1,
+    skipped: SKIPPED_CATEGORIES.includes(category as (typeof SKIPPED_CATEGORIES)[number]),
+  };
+}
+
+function categoryFromMarkup(article$: cheerio.CheerioAPI, contextSelector: string): ReturnType<typeof categoryDetails> {
+  const candidates = [
+    article$("meta[name='category'], meta[property='article:section']").map((_, node) => article$(node).attr("content") ?? "").get(),
+    article$("[data-category], [data-content-category], [class*='category'], [class*='breadcrumb']").map((_, node) => article$(node).text()).get(),
+    article$(contextSelector).text(),
+  ];
+  for (const candidate of candidates.flat()) {
+    const details = categoryDetails(candidate);
+    if (details.category) return details;
+  }
+  return categoryDetails(undefined);
+}
+
+function extractArticleLinks(html: string) {
+  const article$ = cheerio.load(html);
+  const links = new Map<string, { id: string; category: string | null; priority: number; skipped: boolean }>();
+  article$("a[href*='/knowledge-base/']").each((_, node) => {
+    const href = article$(node).attr("href") ?? "";
+    const match = href.match(/\/knowledge-base\/(KB\d+_EN_US|PL\d+)/i);
+    if (!match) return;
+    const id = match[1].toUpperCase();
+    const context = article$(node).closest("article, li, [class*='card'], [class*='result'], [class*='item']").first().text()
+      || article$(node).parent().text();
+    const details = categoryDetails(context);
+    links.set(id, { id, ...details });
+  });
+  for (const id of extractArticleIds(html)) {
+    if (!links.has(id)) links.set(id, { id, ...categoryDetails(undefined) });
+  }
+  return [...links.values()];
+}
+
 async function discoverPage(page: number, headers: Record<string, string>) {
   const response = await fetch(`${BASE_URL}?page=${page}`, { headers });
   if (!response.ok) throw new Error(`GTAC returned ${response.status} while discovering page ${page}`);
-  const ids = extractArticleIds(await response.text());
-  for (const id of ids) {
-    await db.insert(articleUrlsTable).values({ url: ARTICLE_URL(id) }).onConflictDoNothing({ target: articleUrlsTable.url });
+  const links = extractArticleLinks(await response.text());
+  for (const link of links) {
+    await db.insert(articleUrlsTable).values({
+      url: ARTICLE_URL(link.id),
+      category: link.category,
+      priority: link.priority,
+      scraped: link.skipped,
+      scrapedAt: link.skipped ? new Date() : null,
+      lastError: link.skipped ? "Skipped excluded category" : null,
+    }).onConflictDoNothing({ target: articleUrlsTable.url });
   }
-  return ids.length;
+  return links.length;
 }
 
 function parseSourceDate(article$: cheerio.CheerioAPI): Date | null {
@@ -101,7 +175,8 @@ async function scrapePublicArticle(url: string) {
   const content = mainContent || article$("body").text().replace(/\s+/g, " ").trim();
   if (hasVideo && mainContent.length < 120) return null;
   if (!title || content.length < 40) throw new Error(`Public article ${url.split("/").pop()} did not contain usable title/content`);
-  return { title, content: content.slice(0, 100000), tags: extractTags(article$), sourceUpdatedAt: parseSourceDate(article$) };
+  const category = categoryFromMarkup(article$, "main, article, nav");
+  return { title, content: content.slice(0, 100000), tags: extractTags(article$), sourceUpdatedAt: parseSourceDate(article$), ...category };
 }
 
 async function runDiscovery(startPage: number, headers: Record<string, string>) {
@@ -113,7 +188,9 @@ async function runDiscovery(startPage: number, headers: Record<string, string>) 
 }
 
 async function runContentScrape(articleCount: number) {
-  const pending = await db.select().from(articleUrlsTable).where(eq(articleUrlsTable.scraped, false));
+  const pending = await db.select().from(articleUrlsTable)
+    .where(eq(articleUrlsTable.scraped, false))
+    .orderBy(sql`coalesce(${articleUrlsTable.priority}, 999)`, asc(articleUrlsTable.discoveredAt));
   let scrapedCount = articleCount;
   for (const queued of pending) {
     try {
@@ -122,12 +199,16 @@ async function runContentScrape(articleCount: number) {
         await db.update(articleUrlsTable).set({ scraped: true, scrapedAt: new Date(), lastError: "Skipped video-only entry" }).where(eq(articleUrlsTable.id, queued.id));
         continue;
       }
+      if (article.skipped) {
+        await db.update(articleUrlsTable).set({ scraped: true, scrapedAt: new Date(), category: article.category, priority: article.priority, lastError: "Skipped excluded category" }).where(eq(articleUrlsTable.id, queued.id));
+        continue;
+      }
       await db.insert(articlesTable).values({
         ...article,
-        category: "GTAC Knowledge Base",
+        category: article.category ?? queued.category ?? "GTAC Knowledge Base",
         url: queued.url,
       }).onConflictDoNothing({ target: articlesTable.url });
-      await db.update(articleUrlsTable).set({ scraped: true, scrapedAt: new Date(), lastError: null }).where(eq(articleUrlsTable.id, queued.id));
+      await db.update(articleUrlsTable).set({ scraped: true, scrapedAt: new Date(), category: article.category ?? queued.category, priority: article.priority, lastError: null }).where(eq(articleUrlsTable.id, queued.id));
       scrapedCount += 1;
       await updateProgress({ phase: "content", status: "running", currentPage: TOTAL_PAGES, articlesScraped: scrapedCount, lastRun: new Date() });
     } catch (error) {
@@ -155,7 +236,7 @@ export async function runScraper(): Promise<void> {
       const [queueCount] = await db.select({ total: count() }).from(articleUrlsTable);
       await updateProgress({ phase: "content", status: "running", currentPage: TOTAL_PAGES, totalPages: TOTAL_PAGES, articlesScraped: countScraped, lastRun: new Date() });
       countScraped = Math.max(countScraped, 0);
-      if (!queueCount?.total) throw new Error("GTAC discovery found no PL###### article IDs");
+      if (!queueCount?.total) throw new Error("GTAC discovery found no knowledge-base article URLs");
     }
     countScraped = await runContentScrape(countScraped);
     await updateProgress({ phase: "content", status: "complete", currentPage: TOTAL_PAGES, totalPages: TOTAL_PAGES, articlesScraped: countScraped, lastRun: new Date(), lastError: null });

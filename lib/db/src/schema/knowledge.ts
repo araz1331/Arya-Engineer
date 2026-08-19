@@ -17,6 +17,8 @@ export const articlesTable = pgTable("articles", {
 export const articleUrlsTable = pgTable("article_urls", {
   id: serial("id").primaryKey(),
   url: text("url").notNull().unique(),
+  category: text("category"),
+  priority: integer("priority").notNull().default(999),
   scraped: boolean("scraped").notNull().default(false),
   discoveredAt: timestamp("discovered_at", { withTimezone: true }).notNull().defaultNow(),
   scrapedAt: timestamp("scraped_at", { withTimezone: true }),
