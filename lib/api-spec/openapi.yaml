@@ -270,7 +270,19 @@ components:
           type: array
           maxItems: 500
           items:
-            $ref: "#/components/schemas/ArticleInput"
+            $ref: "#/components/schemas/ScraperArticleInput"
+    ScraperArticleInput:
+      type: object
+      required: [title, content, category, tags, url]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 500 }
+        content: { type: string, minLength: 1, maxLength: 1000000 }
+        category: { type: string, maxLength: 120 }
+        tags:
+          type: array
+          maxItems: 50
+          items: { type: string, minLength: 1, maxLength: 80 }
+        url: { type: string, minLength: 1, maxLength: 2000 }
     KnowledgeStats:
       type: object
       required: [totalArticles, indexedArticles, lastScraped, categories]
