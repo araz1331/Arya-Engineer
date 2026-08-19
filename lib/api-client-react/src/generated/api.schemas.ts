@@ -88,9 +88,44 @@ export interface BulkImportResponse {
   skipped: number;
 }
 
+export interface ScraperArticleInput {
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 1000000
+     */
+  content: string;
+  /** @maxLength 120 */
+  category: string;
+  /**
+     * @maxItems 50
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  tags: string[];
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  url: string;
+}
+
 export interface BulkArticleImportInput {
   /** @maxItems 500 */
-  articles: ArticleInput[];
+  articles: ScraperArticleInput[];
+}
+
+/**
+ * @maxItems 500
+ */
+export type BulkArticleImportArray = ScraperArticleInput[];
+
+export interface ArticleCount {
+  count: number;
 }
 
 export interface CategoryCount {

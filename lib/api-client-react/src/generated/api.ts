@@ -21,7 +21,9 @@ import type {
 
 import type {
   Article,
+  ArticleCount,
   ArticleInput,
+  BulkArticleImportArray,
   BulkArticleImportInput,
   BulkImportResponse,
   ChatInput,
@@ -373,6 +375,83 @@ export const useCreateArticle = <TError = ErrorType<void>,
       return useMutation(getCreateArticleMutationOptions(options));
     }
 
+export const getGetArticleCountUrl = () => {
+
+
+
+
+  return `/api/articles/count`
+}
+
+/**
+ * @summary Get total indexed article count
+ */
+export const getArticleCount = async ( options?: Parameters<typeof customFetch>[1]): Promise<ArticleCount> => {
+
+  return customFetch<ArticleCount>(getGetArticleCountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetArticleCountQueryKey = () => {
+    return [
+    `/api/articles/count`
+    ] as const;
+    }
+
+
+export const getGetArticleCountQueryOptions = <TData = Awaited<ReturnType<typeof getArticleCount>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArticleCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetArticleCountQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getArticleCount>>> = ({ signal }) => getArticleCount({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getArticleCount>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetArticleCountQueryResult = NonNullable<Awaited<ReturnType<typeof getArticleCount>>>
+export type GetArticleCountQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get total indexed article count
+ */
+
+export function useGetArticleCount<TData = Awaited<ReturnType<typeof getArticleCount>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArticleCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetArticleCountQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getImportPdfArticleUrl = () => {
 
 
@@ -455,14 +534,14 @@ export const getBulkImportArticlesUrl = () => {
 /**
  * @summary Import articles from a local scraper
  */
-export const bulkImportArticles = async (bulkArticleImportInput: BulkArticleImportInput, options?: Parameters<typeof customFetch>[1]): Promise<BulkImportResponse> => {
+export const bulkImportArticles = async (bulkArticleImportArrayBulkArticleImportInput: BulkArticleImportArray | BulkArticleImportInput, options?: Parameters<typeof customFetch>[1]): Promise<BulkImportResponse> => {
 
   return customFetch<BulkImportResponse>(getBulkImportArticlesUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(bulkArticleImportInput)
+    body: JSON.stringify(bulkArticleImportArrayBulkArticleImportInput)
   }
 );}
 
@@ -471,8 +550,8 @@ export const bulkImportArticles = async (bulkArticleImportInput: BulkArticleImpo
 
 
 export const getBulkImportArticlesMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<BulkArticleImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<BulkArticleImportInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<BulkArticleImportArray | BulkArticleImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<BulkArticleImportArray | BulkArticleImportInput>}, TContext> => {
 
 const mutationKey = ['bulkImportArticles'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -484,7 +563,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkImportArticles>>, {data: BodyType<BulkArticleImportInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkImportArticles>>, {data: BodyType<BulkArticleImportArray | BulkArticleImportInput>}> = (props) => {
           const {data} = props ?? {};
 
           return  bulkImportArticles(data,requestOptions)
@@ -498,18 +577,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type BulkImportArticlesMutationResult = NonNullable<Awaited<ReturnType<typeof bulkImportArticles>>>
-    export type BulkImportArticlesMutationBody = BodyType<BulkArticleImportInput>
+    export type BulkImportArticlesMutationBody = BodyType<BulkArticleImportArray | BulkArticleImportInput>
     export type BulkImportArticlesMutationError = ErrorType<void>
 
     /**
  * @summary Import articles from a local scraper
  */
 export const useBulkImportArticles = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<BulkArticleImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<BulkArticleImportArray | BulkArticleImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof bulkImportArticles>>,
         TError,
-        {data: BodyType<BulkArticleImportInput>},
+        {data: BodyType<BulkArticleImportArray | BulkArticleImportInput>},
         TContext
       > => {
       return useMutation(getBulkImportArticlesMutationOptions(options));

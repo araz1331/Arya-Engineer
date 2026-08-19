@@ -87,6 +87,18 @@ paths:
                 $ref: "#/components/schemas/Article"
         "409":
           description: An article with the same URL already exists
+  /articles/count:
+    get:
+      operationId: getArticleCount
+      tags: [knowledge]
+      summary: Get total indexed article count
+      responses:
+        "200":
+          description: Total indexed articles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArticleCount"
   /articles/pdf:
     post:
       operationId: importPdfArticle
@@ -117,7 +129,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BulkArticleImportInput"
+              oneOf:
+                - $ref: "#/components/schemas/BulkArticleImportArray"
+                - $ref: "#/components/schemas/BulkArticleImportInput"
       responses:
         "201":
           description: Bulk import result
@@ -271,6 +285,11 @@ components:
           maxItems: 500
           items:
             $ref: "#/components/schemas/ScraperArticleInput"
+    BulkArticleImportArray:
+      type: array
+      maxItems: 500
+      items:
+        $ref: "#/components/schemas/ScraperArticleInput"
     ScraperArticleInput:
       type: object
       required: [title, content, category, tags, url]
@@ -283,6 +302,11 @@ components:
           maxItems: 50
           items: { type: string, minLength: 1, maxLength: 80 }
         url: { type: string, minLength: 1, maxLength: 2000 }
+    ArticleCount:
+      type: object
+      required: [count]
+      properties:
+        count: { type: number }
     KnowledgeStats:
       type: object
       required: [totalArticles, indexedArticles, lastScraped, categories]

@@ -95,6 +95,14 @@ export const CreateArticleResponse = zod.object({
 
 
 /**
+ * @summary Get total indexed article count
+ */
+export const GetArticleCountResponse = zod.object({
+  "count": zod.number()
+})
+
+
+/**
  * @summary Extract and save a PDF as a knowledge article
  */
 export const importPdfArticleBodyFilenameMax = 255;
@@ -135,31 +143,51 @@ export const ImportPdfArticleResponse = zod.object({
 /**
  * @summary Import articles from a local scraper
  */
-export const bulkImportArticlesBodyArticlesItemTitleMax = 500;
+export const bulkImportArticlesBodyOneItemTitleMax = 500;
 
-export const bulkImportArticlesBodyArticlesItemContentMax = 1000000;
+export const bulkImportArticlesBodyOneItemContentMax = 1000000;
 
-export const bulkImportArticlesBodyArticlesItemCategoryMax = 120;
+export const bulkImportArticlesBodyOneItemCategoryMax = 120;
 
-export const bulkImportArticlesBodyArticlesItemTagsItemMax = 80;
+export const bulkImportArticlesBodyOneItemTagsItemMax = 80;
 
-export const bulkImportArticlesBodyArticlesItemTagsMax = 50;
+export const bulkImportArticlesBodyOneItemTagsMax = 50;
 
-export const bulkImportArticlesBodyArticlesItemUrlMax = 2000;
+export const bulkImportArticlesBodyOneItemUrlMax = 2000;
 
-export const bulkImportArticlesBodyArticlesMax = 500;
+export const bulkImportArticlesBodyOneMax = 500;
+
+export const bulkImportArticlesBodyTwoArticlesItemTitleMax = 500;
+
+export const bulkImportArticlesBodyTwoArticlesItemContentMax = 1000000;
+
+export const bulkImportArticlesBodyTwoArticlesItemCategoryMax = 120;
+
+export const bulkImportArticlesBodyTwoArticlesItemTagsItemMax = 80;
+
+export const bulkImportArticlesBodyTwoArticlesItemTagsMax = 50;
+
+export const bulkImportArticlesBodyTwoArticlesItemUrlMax = 2000;
+
+export const bulkImportArticlesBodyTwoArticlesMax = 500;
 
 
 
-export const BulkImportArticlesBody = zod.object({
+export const BulkImportArticlesBody = zod.union([zod.array(zod.object({
+  "title": zod.string().min(1).max(bulkImportArticlesBodyOneItemTitleMax),
+  "content": zod.string().min(1).max(bulkImportArticlesBodyOneItemContentMax),
+  "category": zod.string().max(bulkImportArticlesBodyOneItemCategoryMax),
+  "tags": zod.array(zod.string().min(1).max(bulkImportArticlesBodyOneItemTagsItemMax)).max(bulkImportArticlesBodyOneItemTagsMax),
+  "url": zod.string().min(1).max(bulkImportArticlesBodyOneItemUrlMax)
+})).max(bulkImportArticlesBodyOneMax),zod.object({
   "articles": zod.array(zod.object({
-  "title": zod.string().min(1).max(bulkImportArticlesBodyArticlesItemTitleMax),
-  "content": zod.string().min(1).max(bulkImportArticlesBodyArticlesItemContentMax),
-  "category": zod.string().max(bulkImportArticlesBodyArticlesItemCategoryMax).nullish(),
-  "tags": zod.array(zod.string().min(1).max(bulkImportArticlesBodyArticlesItemTagsItemMax)).max(bulkImportArticlesBodyArticlesItemTagsMax),
-  "url": zod.string().max(bulkImportArticlesBodyArticlesItemUrlMax).nullish()
-})).max(bulkImportArticlesBodyArticlesMax)
-})
+  "title": zod.string().min(1).max(bulkImportArticlesBodyTwoArticlesItemTitleMax),
+  "content": zod.string().min(1).max(bulkImportArticlesBodyTwoArticlesItemContentMax),
+  "category": zod.string().max(bulkImportArticlesBodyTwoArticlesItemCategoryMax),
+  "tags": zod.array(zod.string().min(1).max(bulkImportArticlesBodyTwoArticlesItemTagsItemMax)).max(bulkImportArticlesBodyTwoArticlesItemTagsMax),
+  "url": zod.string().min(1).max(bulkImportArticlesBodyTwoArticlesItemUrlMax)
+})).max(bulkImportArticlesBodyTwoArticlesMax)
+})])
 
 export const BulkImportArticlesResponse = zod.object({
   "imported": zod.number(),

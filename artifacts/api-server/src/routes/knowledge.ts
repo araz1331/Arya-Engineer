@@ -4,7 +4,7 @@ import { count, desc } from "drizzle-orm";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { ai } from "@workspace/integrations-gemini-ai";
 import { db, articlesTable, scraperProgressTable } from "@workspace/db";
-import { BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, DebugScrapeResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, SeedScrapeUrlsBody, SeedScrapeUrlsResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
+import { BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, DebugScrapeResponse, GetArticleCountResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, SeedScrapeUrlsBody, SeedScrapeUrlsResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
 import { getArticleList, searchArticles, ensureStarterArticles, toArticleResponse } from "../lib/knowledge";
 import { debugScrape, getScraperStatus, runScraper, seedArticleUrls } from "../lib/scraper";
 
@@ -51,6 +51,11 @@ router.post("/articles", async (req, res): Promise<void> => {
     return;
   }
   res.status(201).json(CreateArticleResponse.parse(toArticleResponse(article)));
+});
+
+router.get("/articles/count", async (_req, res): Promise<void> => {
+  const [articleCount] = await db.select({ total: count() }).from(articlesTable);
+  res.json(GetArticleCountResponse.parse({ count: Number(articleCount?.total ?? 0) }));
 });
 
 router.post("/articles/pdf", async (req, res): Promise<void> => {
@@ -119,9 +124,10 @@ router.post("/articles/bulk", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const articles = Array.isArray(parsed.data) ? parsed.data : parsed.data.articles;
   const imported: Array<typeof articlesTable.$inferSelect> = [];
   await db.transaction(async (tx) => {
-    for (const item of parsed.data.articles) {
+    for (const item of articles) {
       const [article] = await tx.insert(articlesTable).values({
         title: item.title.trim(),
         content: item.content.trim(),
@@ -134,7 +140,7 @@ router.post("/articles/bulk", async (req, res): Promise<void> => {
   });
   res.status(201).json(BulkImportArticlesResponse.parse({
     imported: imported.length,
-    skipped: parsed.data.articles.length - imported.length,
+    skipped: articles.length - imported.length,
   }));
 });
 

@@ -7,7 +7,7 @@
  */
 import type { ScraperArticleInput } from './scraperArticleInput';
 
-export interface BulkArticleImportInput {
-  /** @maxItems 500 */
-  articles: ScraperArticleInput[];
-}
+/**
+ * @maxItems 500
+ */
+export type BulkArticleImportArray = ScraperArticleInput[];

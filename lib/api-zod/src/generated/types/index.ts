@@ -7,7 +7,9 @@
  */
 
 export * from './article';
+export * from './articleCount';
 export * from './articleInput';
+export * from './bulkArticleImportArray';
 export * from './bulkArticleImportInput';
 export * from './bulkImportResponse';
 export * from './categoryCount';
@@ -21,6 +23,7 @@ export * from './listArticlesParams';
 export * from './pdfArticleInput';
 export * from './scrapeDebug';
 export * from './scrapeDebugResponseHeaders';
+export * from './scraperArticleInput';
 export * from './scrapeStatus';
 export * from './scrapeStatusPhase';
 export * from './scrapeStatusStatus';
