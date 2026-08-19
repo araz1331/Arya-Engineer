@@ -20,6 +20,7 @@ export const scraperProgressTable = pgTable("scraper_progress", {
   articlesScraped: integer("articles_scraped").notNull().default(0),
   status: text("status").notNull().default("idle"),
   lastRun: timestamp("last_run", { withTimezone: true }),
+  lastError: text("last_error"),
 });
 
 export const chatSessionsTable = pgTable("chat_sessions", {

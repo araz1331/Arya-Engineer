@@ -14,4 +14,6 @@ export interface ScrapeStatus {
   articlesScraped: number;
   /** @nullable */
   lastRun: Date | null;
+  /** @nullable */
+  lastError: string | null;
 }

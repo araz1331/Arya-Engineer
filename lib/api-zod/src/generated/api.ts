@@ -90,7 +90,8 @@ export const StartScrapeResponse = zod.object({
   "currentPage": zod.number(),
   "totalPages": zod.number(),
   "articlesScraped": zod.number(),
-  "lastRun": zod.coerce.date().nullable()
+  "lastRun": zod.coerce.date().nullable(),
+  "lastError": zod.string().nullable()
 })
 
 
@@ -102,7 +103,18 @@ export const GetScrapeStatusResponse = zod.object({
   "currentPage": zod.number(),
   "totalPages": zod.number(),
   "articlesScraped": zod.number(),
-  "lastRun": zod.coerce.date().nullable()
+  "lastRun": zod.coerce.date().nullable(),
+  "lastError": zod.string().nullable()
+})
+
+
+/**
+ * @summary Test GTAC access with the current scraper session
+ */
+export const DebugScrapeResponse = zod.object({
+  "statusCode": zod.number(),
+  "responseHeaders": zod.record(zod.string(), zod.string()),
+  "bodyPreview": zod.string()
 })
 
 

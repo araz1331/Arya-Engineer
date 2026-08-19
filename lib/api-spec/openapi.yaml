@@ -110,6 +110,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ScrapeStatus"
+  /scrape/debug:
+    get:
+      operationId: debugScrape
+      tags: [scraper]
+      summary: Test GTAC access with the current scraper session
+      responses:
+        "200":
+          description: GTAC response diagnostics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScrapeDebug"
 components:
   schemas:
     HealthStatus:
@@ -182,7 +194,7 @@ components:
         sessionId: { type: string }
     ScrapeStatus:
       type: object
-      required: [status, currentPage, totalPages, articlesScraped, lastRun]
+      required: [status, currentPage, totalPages, articlesScraped, lastRun, lastError]
       properties:
         status:
           type: string
@@ -191,4 +203,14 @@ components:
         totalPages: { type: number }
         articlesScraped: { type: number }
         lastRun: { type: ["string", "null"], format: date-time }
+        lastError: { type: ["string", "null"] }
+    ScrapeDebug:
+      type: object
+      required: [statusCode, responseHeaders, bodyPreview]
+      properties:
+        statusCode: { type: number }
+        responseHeaders:
+          type: object
+          additionalProperties: { type: string }
+        bodyPreview: { type: string }
 

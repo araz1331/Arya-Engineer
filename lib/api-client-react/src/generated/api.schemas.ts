@@ -92,6 +92,16 @@ export interface ScrapeStatus {
   articlesScraped: number;
   /** @nullable */
   lastRun: string | null;
+  /** @nullable */
+  lastError: string | null;
+}
+
+export type ScrapeDebugResponseHeaders = {[key: string]: string};
+
+export interface ScrapeDebug {
+  statusCode: number;
+  responseHeaders: ScrapeDebugResponseHeaders;
+  bodyPreview: string;
 }
 
 export type ListArticlesParams = {

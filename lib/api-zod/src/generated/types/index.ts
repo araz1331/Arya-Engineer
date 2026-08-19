@@ -15,5 +15,7 @@ export * from './chatSource';
 export * from './healthStatus';
 export * from './knowledgeStats';
 export * from './listArticlesParams';
+export * from './scrapeDebug';
+export * from './scrapeDebugResponseHeaders';
 export * from './scrapeStatus';
 export * from './scrapeStatusStatus';
