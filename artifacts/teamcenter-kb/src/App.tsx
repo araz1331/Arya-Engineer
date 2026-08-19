@@ -353,9 +353,9 @@ function CorpusIngestion({ onRefresh }: { onRefresh: () => void }) {
       try {
         const parsed = JSON.parse(String(reader.result ?? ''));
         if (!Array.isArray(parsed)) throw new Error('JSON must contain an array of articles.');
-        bulkImport.mutate({ data: parsed }, {
+        bulkImport.mutate({ data: { articles: parsed } }, {
           onSuccess: (result) => {
-            setNotice({ type: result.errors.length ? 'error' : 'success', text: `Imported ${result.imported} article${result.imported === 1 ? '' : 's'}; skipped ${result.skipped}.${result.errors.length ? ` ${result.errors[0]}` : ''}` });
+            setNotice({ type: 'success', text: `Imported ${result.imported} article${result.imported === 1 ? '' : 's'}; skipped ${result.skipped}.` });
             onRefresh();
           },
           onError: showError,

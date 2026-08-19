@@ -5,11 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { Article } from './article';
 
 export interface BulkImportResponse {
   imported: number;
   skipped: number;
-  errors: string[];
-  articles: Article[];
 }

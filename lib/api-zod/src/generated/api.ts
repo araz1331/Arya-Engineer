@@ -133,45 +133,37 @@ export const ImportPdfArticleResponse = zod.object({
 
 
 /**
- * @summary Import a JSON array of knowledge articles
+ * @summary Import articles from a local scraper
  */
-export const bulkImportArticlesBodyTitleMax = 500;
+export const bulkImportArticlesBodyArticlesItemTitleMax = 500;
 
-export const bulkImportArticlesBodyContentMax = 1000000;
+export const bulkImportArticlesBodyArticlesItemContentMax = 1000000;
 
-export const bulkImportArticlesBodyCategoryMax = 120;
+export const bulkImportArticlesBodyArticlesItemCategoryMax = 120;
 
-export const bulkImportArticlesBodyTagsItemMax = 80;
+export const bulkImportArticlesBodyArticlesItemTagsItemMax = 80;
 
-export const bulkImportArticlesBodyTagsMax = 50;
+export const bulkImportArticlesBodyArticlesItemTagsMax = 50;
 
-export const bulkImportArticlesBodyUrlMax = 2000;
+export const bulkImportArticlesBodyArticlesItemUrlMax = 2000;
+
+export const bulkImportArticlesBodyArticlesMax = 500;
 
 
 
-export const BulkImportArticlesBodyItem = zod.object({
-  "title": zod.string().min(1).max(bulkImportArticlesBodyTitleMax),
-  "content": zod.string().min(1).max(bulkImportArticlesBodyContentMax),
-  "category": zod.string().max(bulkImportArticlesBodyCategoryMax).nullish(),
-  "tags": zod.array(zod.string().min(1).max(bulkImportArticlesBodyTagsItemMax)).max(bulkImportArticlesBodyTagsMax),
-  "url": zod.string().max(bulkImportArticlesBodyUrlMax).nullish()
+export const BulkImportArticlesBody = zod.object({
+  "articles": zod.array(zod.object({
+  "title": zod.string().min(1).max(bulkImportArticlesBodyArticlesItemTitleMax),
+  "content": zod.string().min(1).max(bulkImportArticlesBodyArticlesItemContentMax),
+  "category": zod.string().max(bulkImportArticlesBodyArticlesItemCategoryMax).nullish(),
+  "tags": zod.array(zod.string().min(1).max(bulkImportArticlesBodyArticlesItemTagsItemMax)).max(bulkImportArticlesBodyArticlesItemTagsMax),
+  "url": zod.string().max(bulkImportArticlesBodyArticlesItemUrlMax).nullish()
+})).max(bulkImportArticlesBodyArticlesMax)
 })
-export const BulkImportArticlesBody = zod.array(BulkImportArticlesBodyItem).max(500)
 
 export const BulkImportArticlesResponse = zod.object({
   "imported": zod.number(),
-  "skipped": zod.number(),
-  "errors": zod.array(zod.string()),
-  "articles": zod.array(zod.object({
-  "id": zod.number(),
-  "title": zod.string(),
-  "content": zod.string(),
-  "category": zod.string().nullable(),
-  "tags": zod.array(zod.string()),
-  "url": zod.string().nullable(),
-  "scrapedAt": zod.coerce.date(),
-  "sourceUpdatedAt": zod.coerce.date().nullable()
-}))
+  "skipped": zod.number()
 })
 
 

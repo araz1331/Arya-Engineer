@@ -8,6 +8,7 @@
 
 export * from './article';
 export * from './articleInput';
+export * from './bulkArticleImportInput';
 export * from './bulkImportResponse';
 export * from './categoryCount';
 export * from './chatInput';

@@ -109,16 +109,15 @@ paths:
     post:
       operationId: bulkImportArticles
       tags: [knowledge]
-      summary: Import a JSON array of knowledge articles
+      summary: Import articles from a local scraper
+      security:
+        - scraperBearer: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: array
-              maxItems: 500
-              items:
-                $ref: "#/components/schemas/ArticleInput"
+              $ref: "#/components/schemas/BulkArticleImportInput"
       responses:
         "201":
           description: Bulk import result
@@ -126,6 +125,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BulkImportResponse"
+        "401":
+          description: Missing or invalid scraper bearer token
+        "503":
+          description: SCRAPER_SECRET is not configured
   /chat:
     post:
       operationId: chat
@@ -199,6 +202,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/ScrapeDebug"
 components:
+  securitySchemes:
+    scraperBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
   schemas:
     HealthStatus:
       type: object
@@ -250,17 +258,19 @@ components:
         url: { type: ["string", "null"], maxLength: 2000 }
     BulkImportResponse:
       type: object
-      required: [imported, skipped, errors, articles]
+      required: [imported, skipped]
       properties:
         imported: { type: number }
         skipped: { type: number }
-        errors:
-          type: array
-          items: { type: string }
+    BulkArticleImportInput:
+      type: object
+      required: [articles]
+      properties:
         articles:
           type: array
+          maxItems: 500
           items:
-            $ref: "#/components/schemas/Article"
+            $ref: "#/components/schemas/ArticleInput"
     KnowledgeStats:
       type: object
       required: [totalArticles, indexedArticles, lastScraped, categories]

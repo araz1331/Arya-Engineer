@@ -86,8 +86,11 @@ export interface PdfArticleInput {
 export interface BulkImportResponse {
   imported: number;
   skipped: number;
-  errors: string[];
-  articles: Article[];
+}
+
+export interface BulkArticleImportInput {
+  /** @maxItems 500 */
+  articles: ArticleInput[];
 }
 
 export interface CategoryCount {

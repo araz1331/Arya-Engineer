@@ -22,6 +22,7 @@ import type {
 import type {
   Article,
   ArticleInput,
+  BulkArticleImportInput,
   BulkImportResponse,
   ChatInput,
   ChatReply,
@@ -452,16 +453,16 @@ export const getBulkImportArticlesUrl = () => {
 }
 
 /**
- * @summary Import a JSON array of knowledge articles
+ * @summary Import articles from a local scraper
  */
-export const bulkImportArticles = async (articleInput: ArticleInput[], options?: Parameters<typeof customFetch>[1]): Promise<BulkImportResponse> => {
+export const bulkImportArticles = async (bulkArticleImportInput: BulkArticleImportInput, options?: Parameters<typeof customFetch>[1]): Promise<BulkImportResponse> => {
 
   return customFetch<BulkImportResponse>(getBulkImportArticlesUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(articleInput)
+    body: JSON.stringify(bulkArticleImportInput)
   }
 );}
 
@@ -469,9 +470,9 @@ export const bulkImportArticles = async (articleInput: ArticleInput[], options?:
 
 
 
-export const getBulkImportArticlesMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<ArticleInput[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<ArticleInput[]>}, TContext> => {
+export const getBulkImportArticlesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<BulkArticleImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<BulkArticleImportInput>}, TContext> => {
 
 const mutationKey = ['bulkImportArticles'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -483,7 +484,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkImportArticles>>, {data: BodyType<ArticleInput[]>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkImportArticles>>, {data: BodyType<BulkArticleImportInput>}> = (props) => {
           const {data} = props ?? {};
 
           return  bulkImportArticles(data,requestOptions)
@@ -497,18 +498,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type BulkImportArticlesMutationResult = NonNullable<Awaited<ReturnType<typeof bulkImportArticles>>>
-    export type BulkImportArticlesMutationBody = BodyType<ArticleInput[]>
-    export type BulkImportArticlesMutationError = ErrorType<unknown>
+    export type BulkImportArticlesMutationBody = BodyType<BulkArticleImportInput>
+    export type BulkImportArticlesMutationError = ErrorType<void>
 
     /**
- * @summary Import a JSON array of knowledge articles
+ * @summary Import articles from a local scraper
  */
-export const useBulkImportArticles = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<ArticleInput[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useBulkImportArticles = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<BulkArticleImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof bulkImportArticles>>,
         TError,
-        {data: BodyType<ArticleInput[]>},
+        {data: BodyType<BulkArticleImportInput>},
         TContext
       > => {
       return useMutation(getBulkImportArticlesMutationOptions(options));

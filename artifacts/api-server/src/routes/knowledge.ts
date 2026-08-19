@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { timingSafeEqual } from "node:crypto";
 import { count, desc } from "drizzle-orm";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { ai } from "@workspace/integrations-gemini-ai";
@@ -98,13 +99,27 @@ router.post("/articles/pdf", async (req, res): Promise<void> => {
 });
 
 router.post("/articles/bulk", async (req, res): Promise<void> => {
-  const parsed = BulkImportArticlesBody.safeParse(req.body);
+  const configuredSecret = process.env.SCRAPER_SECRET;
+  if (!configuredSecret) {
+    res.status(503).json({ error: "SCRAPER_SECRET is not configured." });
+    return;
+  }
+  const authorization = req.get("authorization") ?? "";
+  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? "";
+  const expected = Buffer.from(configuredSecret);
+  const received = Buffer.from(token);
+  const validToken = expected.length === received.length && timingSafeEqual(expected, received);
+  if (!validToken) {
+    res.status(401).json({ error: "A valid scraper bearer token is required." });
+    return;
+  }
+
+  const parsed = BulkImportArticlesBody.safeParse(req.body.articles);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
   const imported: Array<typeof articlesTable.$inferSelect> = [];
-  const errors: string[] = [];
   await db.transaction(async (tx) => {
     for (const [index, item] of parsed.data.entries()) {
       const [article] = await tx.insert(articlesTable).values({
@@ -115,14 +130,11 @@ router.post("/articles/bulk", async (req, res): Promise<void> => {
         url: item.url?.trim() || null,
       }).onConflictDoNothing({ target: articlesTable.url }).returning();
       if (article) imported.push(article);
-      else errors.push(`Item ${index + 1}: skipped because its URL already exists.`);
     }
   });
   res.status(201).json(BulkImportArticlesResponse.parse({
     imported: imported.length,
-    skipped: errors.length,
-    errors,
-    articles: imported.map(toArticleResponse),
+    skipped: parsed.data.length - imported.length,
   }));
 });
 
