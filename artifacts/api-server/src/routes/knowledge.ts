@@ -2,9 +2,9 @@ import { Router, type IRouter } from "express";
 import { count, desc } from "drizzle-orm";
 import { ai } from "@workspace/integrations-gemini-ai";
 import { db, articlesTable, scraperProgressTable } from "@workspace/db";
-import { ChatBody, ChatResponse, GetStatsResponse, ListArticlesQueryParams, ListArticlesResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
+import { ChatBody, ChatResponse, DebugScrapeResponse, GetStatsResponse, ListArticlesQueryParams, ListArticlesResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
 import { getArticleList, searchArticles, ensureStarterArticles, toArticleResponse } from "../lib/knowledge";
-import { getScraperStatus, runScraper } from "../lib/scraper";
+import { debugScrape, getScraperStatus, runScraper } from "../lib/scraper";
 
 const router: IRouter = Router();
 
@@ -96,6 +96,10 @@ router.post("/scrape/start", async (_req, res): Promise<void> => {
 
 router.get("/scrape/status", async (_req, res): Promise<void> => {
   res.json(GetScrapeStatusResponse.parse(await getScraperStatus()));
+});
+
+router.get("/scrape/debug", async (_req, res): Promise<void> => {
+  res.json(DebugScrapeResponse.parse(await debugScrape()));
 });
 
 export default router;

@@ -36,6 +36,38 @@ async function updateProgress(values: Partial<typeof scraperProgressTable.$infer
   });
 }
 
+function safeResponseHeaders(headers: Headers): Record<string, string> {
+  const safe: Record<string, string> = {};
+  headers.forEach((value, name) => {
+    const normalized = name.toLowerCase();
+    if (normalized.includes("cookie") || normalized.includes("authorization") || normalized.includes("proxy-auth")) {
+      safe[name] = "[redacted]";
+      return;
+    }
+    safe[name] = value;
+  });
+  return safe;
+}
+
+export async function debugScrape() {
+  const headers = parseCurl(process.env.SIEMENS_CURL);
+  try {
+    const response = await fetch(BASE_URL, { headers });
+    const bodyPreview = (await response.text()).slice(0, 500);
+    return {
+      statusCode: response.status,
+      responseHeaders: safeResponseHeaders(response.headers),
+      bodyPreview,
+    };
+  } catch (error) {
+    return {
+      statusCode: 502,
+      responseHeaders: {},
+      bodyPreview: error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500),
+    };
+  }
+}
+
 function absoluteUrl(href: string): string {
   return href.startsWith("http") ? href : new URL(href, "https://support.sw.siemens.com").toString();
 }
@@ -73,7 +105,7 @@ export async function runScraper(): Promise<void> {
     const [progress] = await db.select().from(scraperProgressTable).limit(1);
     const startPage = progress?.status === "error" ? Math.max(1, progress.currentPage) : progress?.status === "running" ? Math.max(1, progress.currentPage) : 1;
     const totalPages = progress?.totalPages ?? 108;
-    await updateProgress({ status: "running", currentPage: startPage, totalPages, lastRun: new Date() });
+    await updateProgress({ status: "running", currentPage: startPage, totalPages, lastRun: new Date(), lastError: null });
     let count = progress?.articlesScraped ?? 0;
     for (let page = startPage; page <= totalPages; page += 1) {
       const articles = await scrapePage(page, headers);
@@ -84,11 +116,12 @@ export async function runScraper(): Promise<void> {
       await updateProgress({ status: "running", currentPage: page + 1, articlesScraped: count, lastRun: new Date() });
       if (page < totalPages) await wait(2000);
     }
-    await updateProgress({ status: "complete", currentPage: totalPages, articlesScraped: count, lastRun: new Date() });
+    await updateProgress({ status: "complete", currentPage: totalPages, articlesScraped: count, lastRun: new Date(), lastError: null });
   } catch (error) {
     logger.error({ error }, "Teamcenter scraper failed");
     const [progress] = await db.select().from(scraperProgressTable).limit(1);
-    await updateProgress({ status: "error", currentPage: progress?.currentPage ?? 1, articlesScraped: progress?.articlesScraped ?? 0, lastRun: new Date() });
+    const lastError = error instanceof Error ? error.message : String(error);
+    await updateProgress({ status: "error", currentPage: progress?.currentPage ?? 1, articlesScraped: progress?.articlesScraped ?? 0, lastRun: new Date(), lastError });
   } finally {
     activeRun = false;
   }
@@ -96,5 +129,5 @@ export async function runScraper(): Promise<void> {
 
 export async function getScraperStatus() {
   const [progress] = await db.select().from(scraperProgressTable).limit(1);
-  return progress ?? { status: "idle", currentPage: 1, totalPages: 108, articlesScraped: 0, lastRun: null };
+  return progress ?? { status: "idle", currentPage: 1, totalPages: 108, articlesScraped: 0, lastRun: null, lastError: null };
 }
