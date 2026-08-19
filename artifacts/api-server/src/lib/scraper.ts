@@ -4,7 +4,7 @@ import { db, articleUrlsTable, articlesTable, scraperProgressTable } from "@work
 import { logger } from "./logger";
 
 const BASE_URL = "https://support.sw.siemens.com/en-US/product/272221135/knowledge-base";
-const TOTAL_PAGES = 108;
+const TOTAL_PAGES = 45;
 const ARTICLE_URL = (id: string) => `${BASE_URL}/${id}`;
 let activeRun = false;
 
@@ -62,7 +62,7 @@ export async function debugScrape() {
 
 function extractArticleIds(html: string): string[] {
   const ids = new Set<string>();
-  for (const match of html.matchAll(/\b(?:PL\d+|KB\d+_EN_US)\b/gi)) ids.add(match[0].toUpperCase());
+  for (const match of html.matchAll(/\/knowledge-base\/(KB\d+_EN_US|PL\d+)/gi)) ids.add(match[1].toUpperCase());
   return [...ids];
 }
 

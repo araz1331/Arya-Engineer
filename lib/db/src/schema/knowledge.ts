@@ -26,7 +26,7 @@ export const articleUrlsTable = pgTable("article_urls", {
 export const scraperProgressTable = pgTable("scraper_progress", {
   id: serial("id").primaryKey(),
   currentPage: integer("current_page").notNull().default(1),
-  totalPages: integer("total_pages").notNull().default(108),
+  totalPages: integer("total_pages").notNull().default(45),
   articlesScraped: integer("articles_scraped").notNull().default(0),
   status: text("status").notNull().default("idle"),
   lastRun: timestamp("last_run", { withTimezone: true }),
