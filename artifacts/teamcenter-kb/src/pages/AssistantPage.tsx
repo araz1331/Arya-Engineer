@@ -265,7 +265,6 @@ export function AssistantPage() {
 
       <main className="flex-1 p-4 pb-8 max-w-2xl mx-auto w-full">
         <section className="pt-7 pb-6">
-          <p className="text-xs font-semibold uppercase tracking-[.18em] text-primary">SAMT LLC</p>
           <h1 className="mt-3 max-w-sm text-4xl font-semibold leading-[1.05] tracking-tight text-foreground">{t.headline}</h1>
           <p className="mt-3 max-w-sm text-base leading-6 text-muted-foreground">{t.subtitle}</p>
         </section>
