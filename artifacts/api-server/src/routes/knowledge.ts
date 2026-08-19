@@ -10,6 +10,34 @@ import { debugScrape, getScraperStatus, runScraper, seedArticleUrls } from "../l
 
 const router: IRouter = Router();
 
+async function translateQueryForSearch(query: string): Promise<string> {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) return trimmedQuery;
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{
+        role: "user",
+        parts: [{ text: `Translate to English for technical search: ${trimmedQuery}` }],
+      }],
+      config: { maxOutputTokens: 512 },
+    });
+    return response.text?.trim() || trimmedQuery;
+  } catch {
+    return trimmedQuery;
+  }
+}
+
+function replaceNumberedSourcesWithTitles(
+  answer: string,
+  matches: Array<{ article: typeof articlesTable.$inferSelect }>,
+): string {
+  return answer.replace(/\[Source\s+(\d+)\]/gi, (_placeholder, sourceNumber: string) => {
+    const source = matches[Number(sourceNumber) - 1];
+    return source ? `(${source.article.title})` : "";
+  });
+}
+
 function passwordsMatch(candidate: string, expected: string | undefined): boolean {
   if (!expected) return false;
   const candidateBuffer = Buffer.from(candidate);
@@ -204,18 +232,19 @@ router.post("/chat", async (req, res): Promise<void> => {
       imageAnalysis = "The screenshot could not be analyzed. Use the user's written question and the indexed sources.";
     }
   }
-  const retrievalQuery = [parsed.data.message, imageAnalysis].filter(Boolean).join("\n");
+  const englishSearchQuery = await translateQueryForSearch(parsed.data.message);
+  const retrievalQuery = [englishSearchQuery, imageAnalysis].filter(Boolean).join("\n");
   const matches = await searchArticles(retrievalQuery);
   const sessionId = parsed.data.sessionId ?? crypto.randomUUID();
-  const context = matches.map(({ article }, index) => `[Source ${index + 1}] ${article.title}\n${article.content}`).join("\n\n");
-  const prompt = `You are an expert Teamcenter consultant for SAMT LLC (Baku, Azerbaijan).
+  const context = matches.map(({ article }) => `Article title: ${article.title}\n${article.content}`).join("\n\n");
+  const prompt = `You are an expert Teamcenter consultant.
 Answer questions in the same language the user writes in:
 - If user writes in Azerbaijani → answer in Azerbaijani
 - If user writes in Russian → answer in Russian
 - If user writes in English → answer in English
 Base answers on the indexed knowledge base articles.
 If answer not found in corpus — say so honestly.
-Help with Teamcenter installation, configuration, troubleshooting, integrations and daily usage. Cite sources naturally as [Source 1], [Source 2].${parsed.data.imageData ? " The user uploaded a screenshot; incorporate the image analysis into your answer and clearly describe what the screenshot shows before proposing a solution." : ""}\n\nImage analysis:\n${imageAnalysis || "No image uploaded."}\n\nKnowledge base:\n${context}\n\nUser question:\n${parsed.data.message}`;
+Help with Teamcenter installation, configuration, troubleshooting, integrations and daily usage. Do not use numbered source markers such as [Source 1]. If you mention a source, use its exact article title instead.${parsed.data.imageData ? " The user uploaded a screenshot; incorporate the image analysis into your answer and clearly describe what the screenshot shows before proposing a solution." : ""}\n\nImage analysis:\n${imageAnalysis || "No image uploaded."}\n\nKnowledge base:\n${context}\n\nUser question:\n${parsed.data.message}`;
   let answer = "";
   try {
     const response = await ai.models.generateContent({
@@ -229,6 +258,7 @@ Help with Teamcenter installation, configuration, troubleshooting, integrations 
       ? `Based on the indexed Teamcenter references: ${matches[0].article.content}`
       : "I could not find a relevant Teamcenter reference in the indexed knowledge base.";
   }
+  answer = replaceNumberedSourcesWithTitles(answer, matches);
   res.json(ChatResponse.parse({
     answer,
     sessionId,
