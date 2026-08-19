@@ -1,0 +1,86 @@
+Build a Teamcenter Knowledge Base scraper and RAG chat application called tc.arya.az.
+
+## Project Structure
+Full-stack Node.js/TypeScript monorepo:
+- /scraper — Siemens GTAC knowledge base scraper
+- /api — Express backend with RAG endpoints  
+- /client — React chat UI
+
+## Tech Stack
+- Node.js + TypeScript
+- PostgreSQL + pgvector (for embeddings)
+- Google Gemini Flash (gemini-2.0-flash) for LLM and embeddings
+- Cheerio for HTML parsing
+- Express.js for API
+- React + Vite + Tailwind for UI
+
+## Environment Variables needed
+- SIEMENS_CURL — full cURL string from browser (to extract cookies/headers)
+- GEMINI_API_KEY
+- DATABASE_URL
+
+## Phase 1 — Scraper (/scraper)
+1. Parse SIEMENS_CURL env variable to extract all headers and cookies
+2. Scrape Siemens GTAC Knowledge Base:
+   Base URL: https://support.sw.siemens.com/en-US/product/272221135/knowledge-base
+   - Paginate through all pages (1077 articles total, 10 per page = ~108 pages)
+   - For each article: extract title, content, category, tags, URL
+   - Rate limit: 2 second delay between requests (be polite)
+   - Save progress to scraper_progress table (resume if interrupted)
+3. Store in PostgreSQL table: articles(id, title, content, category, tags, url, scraped_at)
+4. Generate embeddings via Gemini and store in pgvector column
+
+## Phase 2 — API (/api)
+Express server with endpoints:
+- POST /chat — RAG chat endpoint
+  - Takes user message
+  - Generates embedding for query
+  - Finds top 5 similar articles via pgvector cosine similarity
+  - Sends context + question to Gemini Flash
+  - Returns streaming response
+- GET /stats — scraper stats (total articles, last scraped)
+- POST /scrape/start — trigger scraper
+- GET /scrape/status — scraper progress
+
+## Phase 3 — Chat UI (/client)
+Clean chat interface:
+- Teamcenter branded (dark navy + teal colors matching Siemens style)
+- Chat window with message history
+- Source citations below each answer (which articles were used)
+- Admin panel: scraper status, progress bar, total articles indexed
+- Language: respond in the same language user writes (Russian or English)
+
+## System Prompt for RAG
+"You are an expert Teamcenter consultant assistant for SAMT LLC. 
+You help users with Teamcenter installation, configuration, 
+troubleshooting and daily usage. Answer based on the provided 
+knowledge base articles. If you don't know — say so honestly. 
+Respond in the same language the user writes in."
+
+## Database Schema
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE articles (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  category TEXT,
+  tags TEXT[],
+  url TEXT UNIQUE,
+  embedding vector(768),
+  scraped_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE scraper_progress (
+  id SERIAL PRIMARY KEY,
+  current_page INT DEFAULT 1,
+  total_pages INT DEFAULT 108,
+  articles_scraped INT DEFAULT 0,
+  status TEXT DEFAULT 'idle',
+  last_run TIMESTAMP
+);
+
+CREATE TABLE chat_sessions (
+  id SERIAL PRIMARY KEY,
+  session_id TEXT

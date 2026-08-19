@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Teamcenter Knowledge Base"
+description = "A bilingual Teamcenter support workspace for searching indexed Siemens GTAC knowledge, chatting with a grounded RAG assistant, and monitoring scraper progress."
+version = "1.0.0"
+id = "artifacts/teamcenter-kb"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21291
+
+[services.development]
+run = "pnpm --filter @workspace/teamcenter-kb run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/teamcenter-kb", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/teamcenter-kb/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21291"
+BASE_PATH = "/"

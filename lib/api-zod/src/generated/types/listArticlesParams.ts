@@ -6,6 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
-}
+export type ListArticlesParams = {
+search?: string;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
+};

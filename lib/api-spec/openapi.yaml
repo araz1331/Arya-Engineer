@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: knowledge
+    description: Teamcenter knowledge base and RAG operations
+  - name: scraper
+    description: Siemens GTAC scraper operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,88 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /stats:
+    get:
+      operationId: getStats
+      tags: [knowledge]
+      summary: Get knowledge base stats
+      responses:
+        "200":
+          description: Current indexing and corpus stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnowledgeStats"
+  /articles:
+    get:
+      operationId: listArticles
+      tags: [knowledge]
+      summary: List indexed knowledge articles
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: Matching indexed articles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Article"
+  /chat:
+    post:
+      operationId: chat
+      tags: [knowledge]
+      summary: Ask the Teamcenter RAG assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatInput"
+      responses:
+        "200":
+          description: Grounded assistant response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatReply"
+  /scrape/start:
+    post:
+      operationId: startScrape
+      tags: [scraper]
+      summary: Start or resume the Siemens GTAC scraper
+      responses:
+        "202":
+          description: Scraper accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScrapeStatus"
+  /scrape/status:
+    get:
+      operationId: getScrapeStatus
+      tags: [scraper]
+      summary: Get scraper progress
+      responses:
+        "200":
+          description: Scraper progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScrapeStatus"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +119,70 @@ components:
           type: string
       required:
         - status
+    Article:
+      type: object
+      required: [id, title, content, category, tags, url, scrapedAt]
+      properties:
+        id: { type: number }
+        title: { type: string }
+        content: { type: string }
+        category: { type: ["string", "null"] }
+        tags:
+          type: array
+          items: { type: string }
+        url: { type: ["string", "null"] }
+        scrapedAt: { type: string, format: date-time }
+    KnowledgeStats:
+      type: object
+      required: [totalArticles, indexedArticles, lastScraped, categories]
+      properties:
+        totalArticles: { type: number }
+        indexedArticles: { type: number }
+        lastScraped: { type: ["string", "null"], format: date-time }
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+    CategoryCount:
+      type: object
+      required: [name, count]
+      properties:
+        name: { type: string }
+        count: { type: number }
+    ChatInput:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string, minLength: 1 }
+        sessionId: { type: ["string", "null"] }
+    ChatSource:
+      type: object
+      required: [id, title, url, category, score]
+      properties:
+        id: { type: number }
+        title: { type: string }
+        url: { type: ["string", "null"] }
+        category: { type: ["string", "null"] }
+        score: { type: number }
+    ChatReply:
+      type: object
+      required: [answer, sources, sessionId]
+      properties:
+        answer: { type: string }
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatSource"
+        sessionId: { type: string }
+    ScrapeStatus:
+      type: object
+      required: [status, currentPage, totalPages, articlesScraped, lastRun]
+      properties:
+        status:
+          type: string
+          enum: [idle, running, complete, error]
+        currentPage: { type: number }
+        totalPages: { type: number }
+        articlesScraped: { type: number }
+        lastRun: { type: ["string", "null"], format: date-time }
 
