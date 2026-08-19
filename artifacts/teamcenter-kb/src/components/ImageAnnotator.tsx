@@ -57,9 +57,12 @@ export function ImageAnnotator({
 
     ctx.drawImage(image, 0, 0, w, h);
 
-    // Draw saved rects
-    ctx.fillStyle = '#000000';
+    // Keep selected areas visible until the operator confirms redaction.
     rects.forEach((r) => {
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(r.x, r.y, r.w, r.h);
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.18)';
       ctx.fillRect(r.x, r.y, r.w, r.h);
     });
 
@@ -118,11 +121,24 @@ export function ImageAnnotator({
   };
 
   const handleRedact = () => {
-    if (!canvasRef.current) return;
+    if (!image) return;
     let mime = file.type as any;
     if (mime !== 'image/png' && mime !== 'image/jpeg') mime = 'image/jpeg';
-    
-    const dataUrl = canvasRef.current.toDataURL(mime, 0.8);
+
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = image.width;
+    exportCanvas.height = image.height;
+    const exportContext = exportCanvas.getContext('2d');
+    if (!exportContext || !canvasRef.current) return;
+
+    exportContext.drawImage(image, 0, 0);
+    const xScale = image.width / canvasRef.current.width;
+    const yScale = image.height / canvasRef.current.height;
+    exportContext.fillStyle = '#000000';
+    rects.forEach((rect) => {
+      exportContext.fillRect(rect.x * xScale, rect.y * yScale, rect.w * xScale, rect.h * yScale);
+    });
+    const dataUrl = exportCanvas.toDataURL(mime, 0.8);
     const [prefix, data] = dataUrl.split(',');
     
     onComplete({

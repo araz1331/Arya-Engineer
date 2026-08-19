@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import { useChat } from '@workspace/api-client-react';
 import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { ImageAnnotator } from '../components/ImageAnnotator';
-import { Link } from 'wouter';
 
 const TRANSLATIONS = {
   en: {
@@ -93,12 +92,16 @@ export function AssistantPage() {
   };
 
   const handleShare = () => {
-    if (navigator.share && reply) {
-      navigator.share({
+    if (!reply) return;
+    const shareData = {
         title: 'Teamcenter Solution',
         text: reply.answer
-      }).catch(() => {});
+    };
+    if (navigator.share) {
+      navigator.share(shareData).catch(() => navigator.clipboard?.writeText(reply.answer));
+      return;
     }
+    navigator.clipboard?.writeText(reply.answer);
   };
 
   if (rawFile) {

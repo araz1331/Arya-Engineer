@@ -33,6 +33,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthSession"
+        "401":
+          description: Wrong password
+        "503":
+          description: Password access has not been configured
   /healthz:
     get:
       operationId: healthCheck

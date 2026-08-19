@@ -51,6 +51,7 @@ export function LoginPage({ area, onLogin }: { area: 'assistant' | 'admin', onLo
             <div>
               <input
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"

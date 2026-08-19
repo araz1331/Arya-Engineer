@@ -17,31 +17,28 @@ export default function App() {
 
 function Router() {
   const [location] = useLocation();
-  const [auth, setAuth] = useState<{ area: 'assistant' | 'admin' } | null>(() => {
-    try {
-      const saved = sessionStorage.getItem('arya_auth');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
+  const [auth, setAuth] = useState<{ assistant: boolean; admin: boolean }>(() => {
+    return {
+      assistant: sessionStorage.getItem('arya_assistant_access') === 'true',
+      admin: sessionStorage.getItem('arya_admin_access') === 'true',
+    };
   });
 
   const handleLogin = (area: 'assistant' | 'admin') => {
-    const data = { area };
-    sessionStorage.setItem('arya_auth', JSON.stringify(data));
-    setAuth(data);
+    sessionStorage.setItem(`arya_${area}_access`, 'true');
+    setAuth((current) => ({ ...current, [area]: true }));
   };
 
   // Routes logic
   if (location === '/admin') {
-    if (auth?.area !== 'admin') {
+    if (!auth.admin) {
       return <LoginPage area="admin" onLogin={() => handleLogin('admin')} />;
     }
     return <AdminPage />;
   }
 
   // Default to assistant
-  if (auth?.area !== 'assistant' && auth?.area !== 'admin') {
+  if (!auth.assistant) {
     return <LoginPage area="assistant" onLogin={() => handleLogin('assistant')} />;
   }
   

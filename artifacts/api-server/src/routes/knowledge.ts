@@ -24,8 +24,16 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
   const expected = parsed.data.area === "admin" ? process.env.ADMIN_PASSWORD : process.env.APP_PASSWORD;
+  if (!expected) {
+    res.status(503).json({ error: "Password access is not configured." });
+    return;
+  }
+  if (!passwordsMatch(parsed.data.password, expected)) {
+    res.status(401).json({ error: "Wrong password." });
+    return;
+  }
   res.json(LoginResponse.parse({
-    authenticated: passwordsMatch(parsed.data.password, expected),
+    authenticated: true,
     area: parsed.data.area,
   }));
 });
