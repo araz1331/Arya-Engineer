@@ -10,6 +10,8 @@ const TRANSLATIONS = {
     placeholder: 'Or describe your problem...',
     questionPlaceholder: "What's your question about this?",
     taps: ['I see an error', 'How to do?', "Can't login"],
+    cameraZone: 'Take a photo or upload an image',
+    dropHint: 'Click, tap, or drop an image here',
     share: 'Share',
     sources: 'Sources',
     askAnother: 'Ask follow-up',
@@ -25,6 +27,8 @@ const TRANSLATIONS = {
     placeholder: 'Və ya probleminizi təsvir edin...',
     questionPlaceholder: 'Bu şəkil barədə sualınız nədir?',
     taps: ['Xəta mesajı var', 'Necə etmək olar?', 'Sistemə girə bilmirəm'],
+    cameraZone: 'Şəkil çəkin və ya şəkil yükləyin',
+    dropHint: 'Klikləyin, toxunun və ya şəkli bura atın',
     share: 'Paylaş',
     sources: 'İstinadlar',
     askAnother: 'Əlavə sual verin',
@@ -40,6 +44,8 @@ const TRANSLATIONS = {
     placeholder: 'Или опишите проблему...',
     questionPlaceholder: 'Какой у вас вопрос по этому фото?',
     taps: ['Вижу ошибку', 'Как сделать?', 'Не могу войти'],
+    cameraZone: 'Сделайте фото или загрузите изображение',
+    dropHint: 'Нажмите, коснитесь или перетащите изображение сюда',
     share: 'Поделиться',
     sources: 'Источники',
     askAnother: 'Задать ещё вопрос',
@@ -295,9 +301,9 @@ export function AssistantPage() {
           <span className={`relative grid h-20 w-20 place-items-center rounded-full border border-primary-foreground/30 bg-primary-foreground/10 ${isDraggingImage ? 'scale-110' : ''} transition-transform`}>
             <Camera className="h-9 w-9" />
           </span>
-          <span className="relative mt-5 text-xl font-semibold">{isDraggingImage ? t.drop : t.snap}</span>
+          <span className="relative mt-5 text-xl font-semibold">{isDraggingImage ? t.drop : t.cameraZone}</span>
           <span className="relative mt-1 text-sm text-primary-foreground/75">
-            {isDraggingImage ? 'PNG, JPG or WEBP' : 'Teamcenter screenshot'}
+            {isDraggingImage ? 'PNG, JPG or WEBP' : t.dropHint}
           </span>
         </button>
 
