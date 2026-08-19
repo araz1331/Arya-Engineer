@@ -15,6 +15,7 @@ const TRANSLATIONS = {
     askAnother: 'Ask follow-up',
     snap: 'Take a photo',
     send: 'Send',
+    drop: 'Drop image here',
     analyzing: 'Finding an answer…',
     analyzingCopy: 'Looking at your Teamcenter issue now.'
   },
@@ -29,6 +30,7 @@ const TRANSLATIONS = {
     askAnother: 'Əlavə sual verin',
     snap: 'Şəkil çəkin',
     send: 'Göndər',
+    drop: 'Şəkli bura atın',
     analyzing: 'Cavab axtarılır…',
     analyzingCopy: 'Teamcenter probleminizi araşdırırıq.'
   },
@@ -43,6 +45,7 @@ const TRANSLATIONS = {
     askAnother: 'Задать ещё вопрос',
     snap: 'Сделать фото',
     send: 'Отправить',
+    drop: 'Перетащите изображение сюда',
     analyzing: 'Ищем ответ…',
     analyzingCopy: 'Разбираемся с вашей проблемой в Teamcenter.'
   }
@@ -60,16 +63,32 @@ export function AssistantPage() {
   const [reply, setReply] = useState<any>(null);
   const [submittedQuestion, setSubmittedQuestion] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chat = useChat();
 
+  const handleImageFile = (file: File | undefined) => {
+    if (file?.type.startsWith('image/')) setRawFile(file);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setRawFile(file);
-    }
+    handleImageFile(e.target.files?.[0]);
     e.target.value = '';
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes('Files')) {
+      e.dataTransfer.dropEffect = 'copy';
+      setIsDraggingImage(true);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setIsDraggingImage(false);
+    handleImageFile(e.dataTransfer.files?.[0]);
   };
 
   const submitQuestion = () => {
@@ -261,14 +280,26 @@ export function AssistantPage() {
         />
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="relative flex min-h-[35dvh] w-full flex-col items-center justify-center overflow-hidden rounded-[2rem] border border-primary/40 bg-primary text-primary-foreground shadow-[0_20px_50px_rgba(20,184,166,.2)] active:scale-[.985] transition-transform"
+          onDragOver={handleDragOver}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsDraggingImage(false);
+          }}
+          onDrop={handleDrop}
+          aria-label={t.snap}
+          className={`relative flex min-h-[35dvh] w-full flex-col items-center justify-center overflow-hidden rounded-[2rem] border-2 bg-primary text-primary-foreground shadow-[0_20px_50px_rgba(20,184,166,.2)] active:scale-[.985] transition-all ${
+            isDraggingImage
+              ? 'border-dashed border-white bg-primary/80 shadow-[0_0_0_4px_rgba(255,255,255,.18),0_20px_50px_rgba(20,184,166,.2)]'
+              : 'border-solid border-primary/40'
+          }`}
         >
           <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(255,255,255,.25),transparent_40%)]" />
-          <span className="relative grid h-20 w-20 place-items-center rounded-full border border-primary-foreground/30 bg-primary-foreground/10">
+          <span className={`relative grid h-20 w-20 place-items-center rounded-full border border-primary-foreground/30 bg-primary-foreground/10 ${isDraggingImage ? 'scale-110' : ''} transition-transform`}>
             <Camera className="h-9 w-9" />
           </span>
-          <span className="relative mt-5 text-xl font-semibold">{t.snap}</span>
-          <span className="relative mt-1 text-sm text-primary-foreground/75">Teamcenter screenshot</span>
+          <span className="relative mt-5 text-xl font-semibold">{isDraggingImage ? t.drop : t.snap}</span>
+          <span className="relative mt-1 text-sm text-primary-foreground/75">
+            {isDraggingImage ? 'PNG, JPG or WEBP' : 'Teamcenter screenshot'}
+          </span>
         </button>
 
         <div className="mt-5 bg-card border border-border rounded-2xl p-3 shadow-lg flex flex-col gap-3 relative focus-within:border-primary/50 transition-colors">
