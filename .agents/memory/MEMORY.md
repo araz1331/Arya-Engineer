@@ -1,0 +1,1 @@
+- [Gemini runtime dependency](gemini-runtime-dependency.md) — executable API packages must declare provider SDKs directly when shared integration libraries externalize them.

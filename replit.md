@@ -1,6 +1,6 @@
-# [Project name]
+# Teamcenter Knowledge Base
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A bilingual Teamcenter support workspace that grounds consultant answers in an indexed Siemens GTAC knowledge base.
 
 ## Run & Operate
 
@@ -10,6 +10,8 @@ _Replace the heading above with the project's name, and this line with one sente
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `SIEMENS_CURL` — browser cURL session used by the GTAC scraper
+- AI is provided through Replit's managed Gemini integration (`AI_INTEGRATIONS_GEMINI_BASE_URL` and `AI_INTEGRATIONS_GEMINI_API_KEY`)
 
 ## Stack
 
@@ -22,23 +24,35 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/teamcenter-kb` — React/Vite chat workspace and admin corpus controls
+- `artifacts/api-server/src/routes/knowledge.ts` — stats, articles, chat, and scraper endpoints
+- `artifacts/api-server/src/lib/knowledge.ts` — corpus seeding and lightweight grounded retrieval
+- `artifacts/api-server/src/lib/scraper.ts` — resumable GTAC scraper and cURL header parsing
+- `lib/db/src/schema/knowledge.ts` — articles, scraper progress, and chat session schema
+- `lib/api-spec/openapi.yaml` — source of truth for API contracts
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The frontend uses generated React Query hooks from the OpenAPI contract; it does not hand-roll API response types.
+- Gemini generates the answer, while retrieval currently uses a database-backed lexical ranker so the first-run product works without unsupported embedding calls.
+- Scraper progress is persisted per page and the scraper is guarded against concurrent runs.
+- Starter articles keep the workspace useful before the first authenticated GTAC scrape, while real scraped URLs remain unique.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Ask Teamcenter questions in English or Russian and receive a same-language answer grounded in indexed articles.
+- Inspect source citations, categories, and confidence scores for each answer.
+- Monitor corpus totals and scraper progress from the admin route.
+- Search indexed articles and start/resume the GTAC scraper with the saved Siemens browser session.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+No project-specific preferences recorded yet.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Keep the server's direct `@google/genai` dependency in sync with the shared Gemini integration package; the API bundle externalizes that runtime package.
+- After changing `lib/api-spec/openapi.yaml`, run `pnpm --filter @workspace/api-spec run codegen` before touching generated hooks or route schemas.
 
 ## Pointers
 
