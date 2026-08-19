@@ -1,5 +1,5 @@
 import { createInsertSchema } from "drizzle-zod";
-import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
 export const articlesTable = pgTable("articles", {
@@ -11,6 +11,16 @@ export const articlesTable = pgTable("articles", {
   url: text("url").unique(),
   embedding: text("embedding"),
   scrapedAt: timestamp("scraped_at", { withTimezone: true }).notNull().defaultNow(),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+});
+
+export const articleUrlsTable = pgTable("article_urls", {
+  id: serial("id").primaryKey(),
+  url: text("url").notNull().unique(),
+  scraped: boolean("scraped").notNull().default(false),
+  discoveredAt: timestamp("discovered_at", { withTimezone: true }).notNull().defaultNow(),
+  scrapedAt: timestamp("scraped_at", { withTimezone: true }),
+  lastError: text("last_error"),
 });
 
 export const scraperProgressTable = pgTable("scraper_progress", {
@@ -21,6 +31,7 @@ export const scraperProgressTable = pgTable("scraper_progress", {
   status: text("status").notNull().default("idle"),
   lastRun: timestamp("last_run", { withTimezone: true }),
   lastError: text("last_error"),
+  phase: text("phase").notNull().default("discover"),
 });
 
 export const chatSessionsTable = pgTable("chat_sessions", {
