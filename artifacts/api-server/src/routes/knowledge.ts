@@ -162,7 +162,14 @@ router.post("/chat", async (req, res): Promise<void> => {
   const matches = await searchArticles(retrievalQuery);
   const sessionId = parsed.data.sessionId ?? crypto.randomUUID();
   const context = matches.map(({ article }, index) => `[Source ${index + 1}] ${article.title}\n${article.content}`).join("\n\n");
-  const prompt = `You are an expert Teamcenter consultant assistant for SAMT LLC. Help with Teamcenter installation, configuration, troubleshooting and daily usage. Answer based on the provided knowledge base articles. If the sources do not contain the answer, say so honestly. Respond in the same language as the user. Cite sources naturally as [Source 1], [Source 2].${parsed.data.imageData ? " The user uploaded a screenshot; incorporate the image analysis into your answer and clearly describe what the screenshot shows before proposing a solution." : ""}\n\nImage analysis:\n${imageAnalysis || "No image uploaded."}\n\nKnowledge base:\n${context}\n\nUser question:\n${parsed.data.message}`;
+  const prompt = `You are an expert Teamcenter consultant for SAMT LLC (Baku, Azerbaijan).
+Answer questions in the same language the user writes in:
+- If user writes in Azerbaijani → answer in Azerbaijani
+- If user writes in Russian → answer in Russian
+- If user writes in English → answer in English
+Base answers on the indexed knowledge base articles.
+If answer not found in corpus — say so honestly.
+Help with Teamcenter installation, configuration, troubleshooting, integrations and daily usage. Cite sources naturally as [Source 1], [Source 2].${parsed.data.imageData ? " The user uploaded a screenshot; incorporate the image analysis into your answer and clearly describe what the screenshot shows before proposing a solution." : ""}\n\nImage analysis:\n${imageAnalysis || "No image uploaded."}\n\nKnowledge base:\n${context}\n\nUser question:\n${parsed.data.message}`;
   let answer = "";
   try {
     const response = await ai.models.generateContent({
