@@ -102,13 +102,17 @@ export async function seedArticleUrls(urls: string[]) {
     if (inserted) added += 1;
     else skipped += 1;
   }
+  if (added > 0) {
+    const [pending] = await db.select({ total: sql<number>`count(*)` }).from(articleUrlsTable).where(eq(articleUrlsTable.scraped, false));
+    await updateProgress({
+      phase: "content",
+      status: "idle",
+      currentPage: 0,
+      totalPages: Number(pending?.total ?? 0),
+      lastError: null,
+    });
+  }
   return { added, skipped, invalid };
-}
-
-function extractArticleIds(html: string): string[] {
-  const ids = new Set<string>();
-  for (const match of html.matchAll(/\/knowledge-base\/(KB\d+_EN_US|PL\d+)/gi)) ids.add(match[1].toUpperCase());
-  return [...ids];
 }
 
 function normalizeCategory(value: string): string {
@@ -143,42 +147,6 @@ function categoryFromMarkup(article$: cheerio.CheerioAPI, contextSelector: strin
   return categoryDetails(undefined);
 }
 
-function extractArticleLinks(html: string) {
-  const article$ = cheerio.load(html);
-  const links = new Map<string, { id: string; category: string | null; priority: number; skipped: boolean }>();
-  article$("a[href*='/knowledge-base/']").each((_, node) => {
-    const href = article$(node).attr("href") ?? "";
-    const match = href.match(/\/knowledge-base\/(KB\d+_EN_US|PL\d+)/i);
-    if (!match) return;
-    const id = match[1].toUpperCase();
-    const context = article$(node).closest("article, li, [class*='card'], [class*='result'], [class*='item']").first().text()
-      || article$(node).parent().text();
-    const details = categoryDetails(context);
-    links.set(id, { id, ...details });
-  });
-  for (const id of extractArticleIds(html)) {
-    if (!links.has(id)) links.set(id, { id, ...categoryDetails(undefined) });
-  }
-  return [...links.values()];
-}
-
-async function discoverPage(page: number, headers: Record<string, string>) {
-  const response = await fetch(`${BASE_URL}?page=${page}`, { headers });
-  if (!response.ok) throw new Error(`GTAC returned ${response.status} while discovering page ${page}`);
-  const links = extractArticleLinks(await response.text());
-  for (const link of links) {
-    await db.insert(articleUrlsTable).values({
-      url: ARTICLE_URL(link.id),
-      category: link.category,
-      priority: link.priority,
-      scraped: link.skipped,
-      scrapedAt: link.skipped ? new Date() : null,
-      lastError: link.skipped ? "Skipped excluded category" : null,
-    }).onConflictDoNothing({ target: articleUrlsTable.url });
-  }
-  return links.length;
-}
-
 function parseSourceDate(article$: cheerio.CheerioAPI): Date | null {
   const value = article$("meta[property='article:modified_time'], meta[name='date'], time[datetime]").first().attr("content")
     ?? article$("time[datetime]").first().attr("datetime");
@@ -208,14 +176,6 @@ async function scrapePublicArticle(url: string) {
   return { title, content: content.slice(0, 100000), tags: extractTags(article$), sourceUpdatedAt: parseSourceDate(article$), ...category };
 }
 
-async function runDiscovery(startPage: number, headers: Record<string, string>) {
-  for (let page = startPage; page <= TOTAL_PAGES; page += 1) {
-    await discoverPage(page, headers);
-    await updateProgress({ phase: "discover", status: "running", currentPage: page, totalPages: TOTAL_PAGES, lastRun: new Date() });
-    if (page < TOTAL_PAGES) await wait(2000);
-  }
-}
-
 async function runContentScrape(articleCount: number) {
   const pending = await db.select().from(articleUrlsTable)
     .where(eq(articleUrlsTable.scraped, false))
@@ -239,10 +199,14 @@ async function runContentScrape(articleCount: number) {
       }).onConflictDoNothing({ target: articlesTable.url });
       await db.update(articleUrlsTable).set({ scraped: true, scrapedAt: new Date(), category: article.category ?? queued.category, priority: article.priority, lastError: null }).where(eq(articleUrlsTable.id, queued.id));
       scrapedCount += 1;
-      await updateProgress({ phase: "content", status: "running", currentPage: TOTAL_PAGES, articlesScraped: scrapedCount, lastRun: new Date() });
+      await updateProgress({ phase: "content", status: "running", currentPage: scrapedCount, totalPages: pending.length, articlesScraped: scrapedCount, lastRun: new Date() });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await db.update(articleUrlsTable).set({ lastError: message }).where(eq(articleUrlsTable.id, queued.id));
+      if (message.includes("GTAC returned 404")) {
+        await db.update(articleUrlsTable).set({ scraped: true, scrapedAt: new Date(), lastError: "Skipped 404 public article" }).where(eq(articleUrlsTable.id, queued.id));
+        continue;
+      }
       throw new Error(message);
     }
     if (queued !== pending[pending.length - 1]) await wait(2000);
@@ -253,27 +217,20 @@ async function runContentScrape(articleCount: number) {
 export async function runScraper(): Promise<void> {
   if (activeRun) return;
   activeRun = true;
-  const headers = parseCurl(process.env.SIEMENS_CURL);
   try {
     const [progress] = await db.select().from(scraperProgressTable).limit(1);
-    const phase = progress?.status === "error" || progress?.status === "running" ? progress.phase : "discover";
-    const startPage = phase === "discover" ? Math.max(1, progress?.currentPage ?? 1) : TOTAL_PAGES;
+    const [queue] = await db.select({ total: sql<number>`count(*)` }).from(articleUrlsTable).where(eq(articleUrlsTable.scraped, false));
+    const totalPending = Number(queue?.total ?? 0);
+    if (!totalPending) throw new Error("No seeded article URLs are waiting to be scraped");
     let countScraped = progress?.articlesScraped ?? 0;
-    await updateProgress({ phase, status: "running", currentPage: startPage, totalPages: TOTAL_PAGES, lastRun: new Date(), lastError: null });
-    if (phase === "discover") {
-      await runDiscovery(startPage, headers);
-      const [queueCount] = await db.select({ total: count() }).from(articleUrlsTable);
-      await updateProgress({ phase: "content", status: "running", currentPage: TOTAL_PAGES, totalPages: TOTAL_PAGES, articlesScraped: countScraped, lastRun: new Date() });
-      countScraped = Math.max(countScraped, 0);
-      if (!queueCount?.total) throw new Error("GTAC discovery found no knowledge-base article URLs");
-    }
+    await updateProgress({ phase: "content", status: "running", currentPage: 0, totalPages: totalPending, lastRun: new Date(), lastError: null });
     countScraped = await runContentScrape(countScraped);
-    await updateProgress({ phase: "content", status: "complete", currentPage: TOTAL_PAGES, totalPages: TOTAL_PAGES, articlesScraped: countScraped, lastRun: new Date(), lastError: null });
+    await updateProgress({ phase: "content", status: "complete", currentPage: totalPending, totalPages: totalPending, articlesScraped: countScraped, lastRun: new Date(), lastError: null });
   } catch (error) {
     logger.error({ error }, "Teamcenter scraper failed");
     const [progress] = await db.select().from(scraperProgressTable).limit(1);
     const lastError = error instanceof Error ? error.message : String(error);
-    await updateProgress({ status: "error", phase: progress?.phase ?? "discover", currentPage: progress?.currentPage ?? 1, articlesScraped: progress?.articlesScraped ?? 0, lastRun: new Date(), lastError });
+    await updateProgress({ status: "error", phase: "content", currentPage: progress?.currentPage ?? 0, totalPages: progress?.totalPages ?? 0, articlesScraped: progress?.articlesScraped ?? 0, lastRun: new Date(), lastError });
   } finally {
     activeRun = false;
   }
@@ -281,5 +238,5 @@ export async function runScraper(): Promise<void> {
 
 export async function getScraperStatus() {
   const [progress] = await db.select().from(scraperProgressTable).limit(1);
-  return progress ?? { status: "idle", phase: "discover", currentPage: 1, totalPages: TOTAL_PAGES, articlesScraped: 0, lastRun: null, lastError: null };
+  return progress ?? { status: "idle", phase: "content", currentPage: 0, totalPages: 0, articlesScraped: 0, lastRun: null, lastError: null };
 }

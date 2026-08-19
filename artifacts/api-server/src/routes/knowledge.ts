@@ -3,9 +3,9 @@ import { count, desc } from "drizzle-orm";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { ai } from "@workspace/integrations-gemini-ai";
 import { db, articlesTable, scraperProgressTable } from "@workspace/db";
-import { BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, DebugScrapeResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
+import { BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, DebugScrapeResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, SeedScrapeUrlsBody, SeedScrapeUrlsResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
 import { getArticleList, searchArticles, ensureStarterArticles, toArticleResponse } from "../lib/knowledge";
-import { debugScrape, getScraperStatus, runScraper } from "../lib/scraper";
+import { debugScrape, getScraperStatus, runScraper, seedArticleUrls } from "../lib/scraper";
 
 const router: IRouter = Router();
 
@@ -194,6 +194,15 @@ router.post("/scrape/start", async (_req, res): Promise<void> => {
   const status = await getScraperStatus();
   if (status.status !== "running") void runScraper();
   res.status(202).json(StartScrapeResponse.parse(status.status === "running" ? status : { ...status, status: "running", lastRun: new Date() }));
+});
+
+router.post("/scrape/seed", async (req, res): Promise<void> => {
+  const parsed = SeedScrapeUrlsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  res.status(201).json(SeedScrapeUrlsResponse.parse(await seedArticleUrls(parsed.data.urls)));
 });
 
 router.get("/scrape/status", async (_req, res): Promise<void> => {

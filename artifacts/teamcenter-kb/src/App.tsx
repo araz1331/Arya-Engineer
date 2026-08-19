@@ -50,6 +50,7 @@ import {
   useImportPdfArticle,
   useListArticles,
   useStartScrape,
+  useSeedScrapeUrls,
 } from '@workspace/api-client-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -270,12 +271,14 @@ const articleCategories = ['Administration', 'Configuration', 'Troubleshooting',
 
 function CorpusIngestion({ onRefresh }: { onRefresh: () => void }) {
   const [form, setForm] = useState({ title: '', content: '', category: 'Troubleshooting', tags: '', url: '' });
+  const [seedText, setSeedText] = useState('');
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const createArticle = useCreateArticle();
   const importPdf = useImportPdfArticle();
   const bulkImport = useBulkImportArticles();
+  const seedUrls = useSeedScrapeUrls();
 
   const showError = (error: unknown) => {
     const message = error instanceof Error ? error.message : 'The import could not be completed.';
@@ -364,7 +367,32 @@ function CorpusIngestion({ onRefresh }: { onRefresh: () => void }) {
     reader.onerror = () => setNotice({ type: 'error', text: 'The JSON file could not be read.' });
     reader.readAsText(file);
   };
-  const busy = createArticle.isPending || importPdf.isPending || bulkImport.isPending;
+  const submitSeeds = (urls: string[], label: string) => {
+    const normalized = urls.map((url) => url.trim()).filter(Boolean);
+    if (!normalized.length) {
+      setNotice({ type: 'error', text: 'Add at least one Teamcenter KB URL.' });
+      return;
+    }
+    setNotice(null);
+    seedUrls.mutate({ data: { urls: normalized } }, {
+      onSuccess: (result) => {
+        setNotice({ type: 'success', text: `${label}: ${result.added} URL${result.added === 1 ? '' : 's'} added, ${result.skipped} already queued, ${result.invalid} invalid.` });
+        onRefresh();
+      },
+      onError: showError,
+    });
+  };
+  const seedManualUrls = (event: FormEvent) => {
+    event.preventDefault();
+    submitSeeds(seedText.split(/\r?\n/), 'Seed import complete');
+  };
+  const quickSeed = () => {
+    const urls = Array.from({ length: 210000 - 207868 + 1 }, (_, index) =>
+      `https://support.sw.siemens.com/en-US/product/272221135/knowledge-base/KB${String(207868 + index).padStart(9, '0')}_EN_US`,
+    );
+    submitSeeds(urls, 'Quick seed complete');
+  };
+  const busy = createArticle.isPending || importPdf.isPending || bulkImport.isPending || seedUrls.isPending;
 
   return (
     <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
@@ -378,6 +406,11 @@ function CorpusIngestion({ onRefresh }: { onRefresh: () => void }) {
         </div>
       </div>
       {notice && <div className={cn('mt-4 rounded-lg border px-3 py-2 text-xs font-semibold', notice.type === 'success' ? 'border-lime-200 bg-lime-50 text-lime-800' : 'border-red-200 bg-red-50 text-red-800')} data-testid={`ingestion-${notice.type}`}>{notice.text}</div>}
+       <form onSubmit={seedManualUrls} className="mt-5 rounded-xl border border-cyan-200 bg-cyan-50/50 p-4">
+         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><h3 className="text-xs font-extrabold text-slate-800">Seed public article URLs</h3><p className="mt-1 text-[11px] leading-5 text-muted-foreground">Paste one Teamcenter KB URL per line. Phase 2 fetches these public pages without authentication.</p></div><button type="button" onClick={quickSeed} disabled={busy} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-primary/30 bg-white px-3 py-2 text-[11px] font-bold text-primary hover:bg-cyan-100 disabled:opacity-50" data-testid="button-quick-seed"><Zap className="h-3.5 w-3.5" /> Quick seed KB range</button></div>
+         <textarea value={seedText} onChange={(event) => setSeedText(event.target.value)} placeholder="https://support.sw.siemens.com/en-US/product/272221135/knowledge-base/KB000207868_EN_US&#10;/knowledge-base/PL123456" rows={4} className="mt-3 w-full resize-y rounded-lg border border-cyan-200 bg-white px-3 py-2 text-xs outline-none focus:border-primary" data-testid="textarea-seed-urls" />
+         <div className="mt-3 flex justify-end"><button type="submit" disabled={busy || !seedText.trim()} className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-[11px] font-extrabold text-white hover:bg-slate-950 disabled:cursor-not-allowed disabled:opacity-50" data-testid="button-seed-urls"><Upload className="h-3.5 w-3.5" /> {seedUrls.isPending ? 'Seeding…' : 'Add seed URLs'}</button></div>
+       </form>
       <form onSubmit={saveArticle} className="mt-5 grid gap-4 md:grid-cols-2">
         <label className="text-xs font-bold text-slate-700">Title<input required maxLength={500} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Teamcenter article title" className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background px-3 text-xs font-normal outline-none focus:border-primary" data-testid="input-article-title" /></label>
         <label className="text-xs font-bold text-slate-700">Category<select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background px-3 text-xs font-normal outline-none focus:border-primary" data-testid="select-article-category">{articleCategories.map((category) => <option key={category}>{category}</option>)}</select></label>
