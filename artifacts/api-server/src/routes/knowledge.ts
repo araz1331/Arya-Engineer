@@ -114,14 +114,14 @@ router.post("/articles/bulk", async (req, res): Promise<void> => {
     return;
   }
 
-  const parsed = BulkImportArticlesBody.safeParse(req.body.articles);
+  const parsed = BulkImportArticlesBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
   const imported: Array<typeof articlesTable.$inferSelect> = [];
   await db.transaction(async (tx) => {
-    for (const [index, item] of parsed.data.entries()) {
+    for (const item of parsed.data.articles) {
       const [article] = await tx.insert(articlesTable).values({
         title: item.title.trim(),
         content: item.content.trim(),
@@ -134,7 +134,7 @@ router.post("/articles/bulk", async (req, res): Promise<void> => {
   });
   res.status(201).json(BulkImportArticlesResponse.parse({
     imported: imported.length,
-    skipped: parsed.data.length - imported.length,
+    skipped: parsed.data.articles.length - imported.length,
   }));
 });
 
