@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useMemo, useState } from 'react';
+import { type ChangeEvent, type FormEvent, type ReactNode, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
@@ -20,6 +20,7 @@ import {
   Network,
   PanelLeftClose,
   PanelLeftOpen,
+  Paperclip,
   Play,
   RefreshCw,
   Search,
@@ -175,22 +176,59 @@ function HomePage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [reply, setReply] = useState<{ answer: string; sources: Array<{ id: number; title: string; url: string | null; category: string | null; score: number }>; sessionId: string } | null>(null);
   const [submittedQuestion, setSubmittedQuestion] = useState('');
+  const [attachedImage, setAttachedImage] = useState<{ name: string; data: string; mimeType: 'image/png' | 'image/jpeg'; preview: string } | null>(null);
+  const [submittedImage, setSubmittedImage] = useState<{ name: string; preview: string } | null>(null);
+  const [imageError, setImageError] = useState('');
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const chat = useChat();
   const stats = useGetStats({ query: { queryKey: getGetStatsQueryKey(), staleTime: 30000 } });
   const suggestions = ['How do I diagnose a failed BMIDE deployment?', 'What is the Teamcenter RAC cache reset sequence?', 'Explain relation types in an ItemRevision'];
 
   const submitQuestion = (event?: FormEvent) => {
     event?.preventDefault();
-    const message = question.trim();
+    const message = question.trim() || (attachedImage ? 'Analyze this screenshot.' : '');
     if (!message || chat.isPending) return;
     setSubmittedQuestion(message);
+    setSubmittedImage(attachedImage ? { name: attachedImage.name, preview: attachedImage.preview } : null);
     setReply(null);
-    chat.mutate({ data: { message, sessionId } }, {
+    chat.mutate({ data: { message, sessionId, imageData: attachedImage?.data ?? null, imageMimeType: attachedImage?.mimeType ?? null } }, {
       onSuccess: (data) => {
         setReply(data);
         setSessionId(data.sessionId);
       },
     });
+  };
+
+  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!['image/png', 'image/jpeg'].includes(file.type)) {
+      setImageError('Please choose a PNG or JPG screenshot.');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setImageError('Screenshots must be smaller than 8 MB.');
+      return;
+    }
+    setImageError('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? '');
+      const [prefix, data] = result.split(',');
+      if (!data) {
+        setImageError('That image could not be read.');
+        return;
+      }
+      setAttachedImage({
+        name: file.name,
+        data,
+        mimeType: file.type as 'image/png' | 'image/jpeg',
+        preview: prefix.startsWith('data:') ? result : `data:${file.type};base64,${data}`,
+      });
+    };
+    reader.onerror = () => setImageError('That image could not be read.');
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -207,9 +245,9 @@ function HomePage() {
             <div className="min-h-[340px] px-5 py-7 md:px-12 md:py-10">
               {!submittedQuestion && !chat.isError && <div className="flex h-full min-h-[250px] flex-col items-center justify-center text-center"><div className="relative mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-cyan-50 text-primary"><Sparkles className="h-7 w-7" /><span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-lime-500" /></div><h3 className="font-display text-xl font-bold tracking-tight">What are you working through?</h3><p className="mt-2 max-w-md text-xs leading-5 text-muted-foreground">Ask about configuration, deployment, integrations, troubleshooting, or Teamcenter architecture.</p><div className="mt-7 flex flex-wrap justify-center gap-2">{suggestions.map((item, index) => <button type="button" key={item} onClick={() => { setQuestion(item); }} className="rounded-full border border-border bg-background px-3 py-2 text-left text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:bg-cyan-50 hover:text-primary" data-testid={`button-suggestion-${index}`}>{item}</button>)}</div></div>}
               {chat.isError && <QueryError message="The assistant could not complete that request. Your question is still in the composer." retry={() => submitQuestion()} />}
-              {submittedQuestion && !chat.isError && <div className="space-y-7"><div className="flex justify-end"><div className="max-w-[88%] rounded-2xl rounded-br-md bg-slate-950 px-4 py-3 text-sm leading-6 text-slate-100 shadow-sm">{submittedQuestion}</div></div>{chat.isPending && <div className="flex items-start gap-3"><div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-cyan-50 text-primary"><Bot className="h-4 w-4" /></div><div className="w-full max-w-xl rounded-2xl rounded-tl-md border border-border bg-background px-4 py-4"><LoadingLines count={4} /><div className="mt-4 flex items-center gap-2 font-mono-ui text-[10px] uppercase tracking-wider text-primary"><LoaderCircle className="h-3 w-3 animate-spin" /> Searching indexed sources</div></div></div>}{reply && <div className="flex items-start gap-3 animate-rise"><div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-cyan-50 text-primary"><Bot className="h-4 w-4" /></div><div className="min-w-0 flex-1"><div className="rounded-2xl rounded-tl-md border border-border bg-background px-5 py-4 text-sm leading-7 text-slate-700"><div className="mb-3 flex items-center gap-2 font-mono-ui text-[10px] font-bold uppercase tracking-widest text-primary"><CheckCircle2 className="h-3.5 w-3.5 text-lime-600" /> Grounded response</div><div className="whitespace-pre-wrap">{reply.answer}</div></div><div className="mt-5"><div className="mb-2 flex items-center justify-between"><div className="eyebrow text-muted-foreground">Retrieved evidence · {reply.sources.length} sources</div><span className="font-mono-ui text-[10px] text-muted-foreground">SESSION {reply.sessionId.slice(0, 8).toUpperCase()}</span></div><div className="grid gap-2">{reply.sources.map((source, index) => <a key={source.id} href={source.url || '#'} target={source.url ? '_blank' : undefined} rel="noreferrer" onClick={(event) => { if (!source.url) event.preventDefault(); }} className="group flex items-start gap-3 rounded-xl border border-border/80 bg-card p-3 transition-colors hover:border-primary/40 hover:bg-cyan-50/50" data-testid={`link-source-${source.id}`}><span className="font-mono-ui pt-0.5 text-[10px] text-primary">0{index + 1}</span><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className="text-xs font-bold leading-5 text-slate-800 group-hover:text-primary">{source.title}</p>{source.url && <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />}</div><div className="mt-1 flex items-center gap-2 font-mono-ui text-[9px] uppercase tracking-wider text-muted-foreground"><span>{source.category || 'General'}</span><span className="text-border">/</span><span>match {(source.score * 100).toFixed(1)}%</span></div></div></a>)}</div></div></div></div>}</div>}
-            </div>
-            <form onSubmit={submitQuestion} className="border-t border-border/80 bg-slate-50/70 p-4 md:p-5"><div className="flex items-end gap-3 rounded-xl border border-border bg-card p-2 shadow-sm focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/10"><textarea value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submitQuestion(); } }} placeholder="Ask a Teamcenter question…" rows={2} className="min-h-[48px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground/70" data-testid="input-chat-question" /><button type="submit" disabled={!question.trim() || chat.isPending} className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition-all hover:-translate-y-0.5 hover:bg-slate-950 disabled:cursor-not-allowed disabled:opacity-40" data-testid="button-submit-chat" aria-label="Submit question"><Send className="h-4 w-4" /></button></div><div className="mt-2 flex items-center justify-between px-1 text-[10px] text-muted-foreground"><span>Enter to send · Shift + Enter for a new line</span><span className="font-mono-ui">GTAC / PRIVATE</span></div></form>
+               {submittedQuestion && !chat.isError && <div className="space-y-7"><div className="flex justify-end"><div className="flex max-w-[88%] flex-col items-end gap-2"><div className="rounded-2xl rounded-br-md bg-slate-950 px-4 py-3 text-sm leading-6 text-slate-100 shadow-sm">{submittedQuestion}</div>{submittedImage && <img src={submittedImage.preview} alt={`Uploaded screenshot: ${submittedImage.name}`} className="max-h-52 max-w-[280px] rounded-xl border border-slate-300 object-contain shadow-sm" />}</div></div>{chat.isPending && <div className="flex items-start gap-3"><div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-cyan-50 text-primary"><Bot className="h-4 w-4" /></div><div className="w-full max-w-xl rounded-2xl rounded-tl-md border border-border bg-background px-4 py-4"><LoadingLines count={4} /><div className="mt-4 flex items-center gap-2 font-mono-ui text-[10px] uppercase tracking-wider text-primary"><LoaderCircle className="h-3 w-3 animate-spin" /> Analyzing screenshot and searching sources</div></div></div>}{reply && <div className="flex items-start gap-3 animate-rise"><div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-cyan-50 text-primary"><Bot className="h-4 w-4" /></div><div className="min-w-0 flex-1"><div className="rounded-2xl rounded-tl-md border border-border bg-background px-5 py-4 text-sm leading-7 text-slate-700"><div className="mb-3 flex items-center gap-2 font-mono-ui text-[10px] font-bold uppercase tracking-widest text-primary"><CheckCircle2 className="h-3.5 w-3.5 text-lime-600" /> Grounded response</div><div className="whitespace-pre-wrap">{reply.answer}</div></div><div className="mt-5"><div className="mb-2 flex items-center justify-between"><div className="eyebrow text-muted-foreground">Retrieved evidence · {reply.sources.length} sources</div><span className="font-mono-ui text-[10px] text-muted-foreground">SESSION {reply.sessionId.slice(0, 8).toUpperCase()}</span></div><div className="grid gap-2">{reply.sources.map((source, index) => <a key={source.id} href={source.url || '#'} target={source.url ? '_blank' : undefined} rel="noreferrer" onClick={(event) => { if (!source.url) event.preventDefault(); }} className="group flex items-start gap-3 rounded-xl border border-border/80 bg-card p-3 transition-colors hover:border-primary/40 hover:bg-cyan-50/50" data-testid={`link-source-${source.id}`}><span className="font-mono-ui pt-0.5 text-[10px] text-primary">0{index + 1}</span><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className="text-xs font-bold leading-5 text-slate-800 group-hover:text-primary">{source.title}</p>{source.url && <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />}</div><div className="mt-1 flex items-center gap-2 font-mono-ui text-[9px] uppercase tracking-wider text-muted-foreground"><span>{source.category || 'General'}</span><span className="text-border">/</span><span>match {(source.score * 100).toFixed(1)}%</span></div></div></a>)}</div></div></div></div>}</div>}
+             </div>
+             <form onSubmit={submitQuestion} className="border-t border-border/80 bg-slate-50/70 p-4 md:p-5"><div className="flex items-end gap-3 rounded-xl border border-border bg-card p-2 shadow-sm focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/10">{attachedImage && <div className="relative shrink-0"><img src={attachedImage.preview} alt={`Selected screenshot: ${attachedImage.name}`} className="h-12 w-12 rounded-lg border border-border object-cover" /><button type="button" onClick={() => { setAttachedImage(null); setImageError(''); }} className="absolute -right-2 -top-2 grid h-5 w-5 place-items-center rounded-full bg-slate-950 text-white shadow-sm hover:bg-primary" aria-label="Remove screenshot" data-testid="button-remove-image"><X className="h-3 w-3" /></button></div>}<textarea value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submitQuestion(); } }} placeholder={attachedImage ? 'Add a question about this screenshot…' : 'Ask a Teamcenter question…'} rows={2} className="min-h-[48px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground/70" data-testid="input-chat-question" /><input ref={imageInputRef} type="file" accept="image/png,image/jpeg" onChange={handleImageChange} className="hidden" data-testid="input-chat-image" /><button type="button" onClick={() => imageInputRef.current?.click()} disabled={chat.isPending} className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:bg-cyan-50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40" aria-label="Attach screenshot" title="Attach PNG or JPG screenshot" data-testid="button-attach-image"><Paperclip className="h-4 w-4" /></button><button type="submit" disabled={(!question.trim() && !attachedImage) || chat.isPending} className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition-all hover:-translate-y-0.5 hover:bg-slate-950 disabled:cursor-not-allowed disabled:opacity-40" data-testid="button-submit-chat" aria-label="Submit question"><Send className="h-4 w-4" /></button></div>{imageError && <p className="mt-2 px-1 text-[10px] font-semibold text-red-600">{imageError}</p>}<div className="mt-2 flex items-center justify-between px-1 text-[10px] text-muted-foreground"><span>Enter to send · Shift + Enter for a new line · PNG/JPG up to 8 MB</span><span className="font-mono-ui">GTAC / PRIVATE</span></div></form>
           </section>
 
           <aside className="space-y-5">

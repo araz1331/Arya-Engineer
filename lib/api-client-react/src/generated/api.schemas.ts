@@ -34,11 +34,29 @@ export interface KnowledgeStats {
   categories: CategoryCount[];
 }
 
+/**
+ * @nullable
+ */
+export type ChatInputImageMimeType = typeof ChatInputImageMimeType[keyof typeof ChatInputImageMimeType] | null;
+
+
+export const ChatInputImageMimeType = {
+  'image/png': 'image/png',
+  'image/jpeg': 'image/jpeg',
+} as const;
+
 export interface ChatInput {
   /** @minLength 1 */
   message: string;
   /** @nullable */
   sessionId?: string | null;
+  /**
+     * Base64-encoded PNG or JPEG image without the data URL prefix
+     * @nullable
+     */
+  imageData?: string | null;
+  /** @nullable */
+  imageMimeType?: ChatInputImageMimeType;
 }
 
 export interface ChatSource {

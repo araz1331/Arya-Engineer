@@ -9,6 +9,7 @@
 export * from './article';
 export * from './categoryCount';
 export * from './chatInput';
+export * from './chatInputImageMimeType';
 export * from './chatReply';
 export * from './chatSource';
 export * from './healthStatus';

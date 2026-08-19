@@ -155,6 +155,12 @@ components:
       properties:
         message: { type: string, minLength: 1 }
         sessionId: { type: ["string", "null"] }
+        imageData:
+          type: ["string", "null"]
+          description: Base64-encoded PNG or JPEG image without the data URL prefix
+        imageMimeType:
+          type: ["string", "null"]
+          enum: [image/png, image/jpeg, null]
     ChatSource:
       type: object
       required: [id, title, url, category, score]

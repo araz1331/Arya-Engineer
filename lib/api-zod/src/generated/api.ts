@@ -64,7 +64,9 @@ export const ListArticlesResponse = zod.array(ListArticlesResponseItem)
 
 export const ChatBody = zod.object({
   "message": zod.string().min(1),
-  "sessionId": zod.string().nullish()
+  "sessionId": zod.string().nullish(),
+  "imageData": zod.string().nullish().describe('Base64-encoded PNG or JPEG image without the data URL prefix'),
+  "imageMimeType": zod.union([zod.literal('image/png'),zod.literal('image/jpeg'),zod.literal(null)]).nullish()
 })
 
 export const ChatResponse = zod.object({

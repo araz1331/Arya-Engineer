@@ -5,10 +5,18 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ChatInputImageMimeType } from './chatInputImageMimeType';
 
 export interface ChatInput {
   /** @minLength 1 */
   message: string;
   /** @nullable */
   sessionId?: string | null;
+  /**
+     * Base64-encoded PNG or JPEG image without the data URL prefix
+     * @nullable
+     */
+  imageData?: string | null;
+  /** @nullable */
+  imageMimeType?: ChatInputImageMimeType;
 }
