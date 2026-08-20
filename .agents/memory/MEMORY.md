@@ -1,2 +1,3 @@
 - [Gemini runtime dependency](gemini-runtime-dependency.md) — executable API packages must declare provider SDKs directly when shared integration libraries externalize them.
 - [Gemini vision model](gemini-vision-model.md) — use the currently supported flash model for inline screenshot analysis rather than historical model names.
+- [OpenAPI and Zod compatibility](openapi-zod-compatibility.md) — keep generated response schemas compatible with the installed Zod runtime, not just valid OpenAPI.
