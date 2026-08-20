@@ -158,6 +158,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ArticleCleanupResponse"
+  /admin/cleanup:
+    post:
+      operationId: cleanupAdminArticles
+      tags: [knowledge]
+      summary: Remove low-quality articles from the indexed corpus
+      responses:
+        "200":
+          description: Quality cleanup result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArticleQualityCleanupResponse"
   /articles/pdf:
     post:
       operationId: importPdfArticle
@@ -483,7 +495,7 @@ components:
       properties:
         id: { type: number }
         title: { type: string }
-        content: { type: string, maxLength: 300 }
+        content: { type: string, maxLength: 200 }
         url:
           type: [string, "null"]
     ArticleCleanupResponse:
@@ -492,6 +504,12 @@ components:
       properties:
         scanned: { type: number }
         cleaned: { type: number }
+    ArticleQualityCleanupResponse:
+      type: object
+      required: [removed, remaining]
+      properties:
+        removed: { type: number }
+        remaining: { type: number }
     KnowledgeStats:
       type: object
       required: [totalArticles, indexedArticles, lastScraped, categories]

@@ -141,6 +141,35 @@ router.get("/articles/count", async (_req, res): Promise<void> => {
   res.json(GetArticleCountResponse.parse({ count: Number(articleCount?.total ?? 0) }));
 });
 
+router.post("/admin/cleanup", async (_req, res): Promise<void> => {
+  const articles = await db.select({
+    id: articlesTable.id,
+    title: articlesTable.title,
+    content: articlesTable.content,
+  }).from(articlesTable);
+  const removable = articles.filter((article) => {
+    const title = article.title.trim();
+    const content = article.content.trim();
+    return content.length < 300
+      || title.length === 0
+      || /^(Products & Services|Sign in|Accept cookies|Cookie|Navigation)\b/i.test(content)
+      || /(404|Error|Page Not Found)/i.test(title);
+  });
+
+  if (removable.length) {
+    await db.transaction(async (tx) => {
+      for (const article of removable) {
+        await tx.delete(articlesTable).where(eq(articlesTable.id, article.id));
+      }
+    });
+  }
+  const [remaining] = await db.select({ total: count() }).from(articlesTable);
+  res.json({
+    removed: removable.length,
+    remaining: Number(remaining?.total ?? 0),
+  });
+});
+
 router.post("/admin/articles/clean-all", async (_req, res): Promise<void> => {
   const articles = await db.select({ id: articlesTable.id, content: articlesTable.content }).from(articlesTable);
   let cleaned = 0;
@@ -176,7 +205,7 @@ router.get("/admin/articles/sample", async (req, res): Promise<void> => {
   res.json(articles.map((article) => ({
     id: article.id,
     title: article.title,
-    content: article.content.slice(0, 300),
+    content: article.content.slice(0, 200),
     url: article.url,
   })));
 });

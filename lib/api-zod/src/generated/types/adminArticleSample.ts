@@ -9,7 +9,7 @@
 export interface AdminArticleSample {
   id: number;
   title: string;
-  /** @maxLength 300 */
+  /** @maxLength 200 */
   content: string;
   /** @nullable */
   url: string | null;

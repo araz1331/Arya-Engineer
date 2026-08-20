@@ -132,7 +132,7 @@ export const GetAdminArticleSampleQueryParams = zod.object({
   "count": zod.coerce.number().int().min(1).max(getAdminArticleSampleQueryCountMax).default(getAdminArticleSampleQueryCountDefault)
 })
 
-export const getAdminArticleSampleResponseContentMax = 300;
+export const getAdminArticleSampleResponseContentMax = 200;
 
 
 
@@ -151,6 +151,15 @@ export const GetAdminArticleSampleResponse = zod.array(GetAdminArticleSampleResp
 export const CleanAllAdminArticlesResponse = zod.object({
   "scanned": zod.number(),
   "cleaned": zod.number()
+})
+
+
+/**
+ * @summary Remove low-quality articles from the indexed corpus
+ */
+export const CleanupAdminArticlesResponse = zod.object({
+  "removed": zod.number(),
+  "remaining": zod.number()
 })
 
 
