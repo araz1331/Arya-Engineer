@@ -7,6 +7,13 @@
  */
 
 export * from './adminArticleSample';
+export * from './analyticsEventInput';
+export * from './analyticsEventInputEventType';
+export * from './analyticsEventResponse';
+export * from './analyticsLanguage';
+export * from './analyticsPeriod';
+export * from './analyticsPopularQuestion';
+export * from './analyticsStats';
 export * from './article';
 export * from './articleCleanupResponse';
 export * from './articleCount';

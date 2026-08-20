@@ -13,6 +13,16 @@ export interface ChatInput {
   /** @nullable */
   sessionId?: string | null;
   /**
+     * @maxLength 100
+     * @nullable
+     */
+  visitorId?: string | null;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  language?: string | null;
+  /**
      * Base64-encoded PNG or JPEG image without the data URL prefix
      * @nullable
      */

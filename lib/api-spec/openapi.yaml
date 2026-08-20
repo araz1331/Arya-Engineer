@@ -218,6 +218,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatReply"
+  /analytics/events:
+    post:
+      operationId: recordAnalyticsEvent
+      tags: [knowledge]
+      summary: Record an anonymous product analytics event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyticsEventInput"
+      responses:
+        "201":
+          description: Analytics event recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsEventResponse"
   /community/questions:
     post:
       operationId: submitCommunityQuestion
@@ -313,6 +331,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FeedbackStats"
+  /admin/analytics:
+    get:
+      operationId: getAnalyticsStats
+      tags: [knowledge]
+      summary: Get anonymous product analytics for the admin dashboard
+      responses:
+        "200":
+          description: Product analytics grouped by time period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsStats"
 components:
   securitySchemes:
     bulkImportBearer:
@@ -444,12 +474,27 @@ components:
       properties:
         message: { type: string, minLength: 1 }
         sessionId: { type: ["string", "null"] }
+        visitorId: { type: ["string", "null"], maxLength: 100 }
+        language: { type: ["string", "null"], maxLength: 20 }
         imageData:
           type: ["string", "null"]
           description: Base64-encoded PNG or JPEG image without the data URL prefix
         imageMimeType:
           type: ["string", "null"]
           enum: [image/png, image/jpeg, null]
+    AnalyticsEventInput:
+      type: object
+      required: [eventType, visitorId]
+      properties:
+        eventType: { type: string, enum: [page_view] }
+        visitorId: { type: string, minLength: 1, maxLength: 100 }
+        sessionId: { type: ["string", "null"], maxLength: 200 }
+        language: { type: ["string", "null"], maxLength: 20 }
+    AnalyticsEventResponse:
+      type: object
+      required: [recorded]
+      properties:
+        recorded: { type: boolean }
     ChatSource:
       type: object
       required: [id, title, url, category, score]
@@ -489,6 +534,8 @@ components:
         question: { type: string, minLength: 1, maxLength: 10000 }
         screenshotRef: { type: ["string", "null"], maxLength: 500 }
         language: { type: string, minLength: 2, maxLength: 20 }
+        visitorId: { type: ["string", "null"], maxLength: 100 }
+        sessionId: { type: ["string", "null"], maxLength: 200 }
     CommunityQuestionResponse:
       type: object
       required: [id, status, confirmation]
@@ -519,6 +566,7 @@ components:
       properties:
         responseId: { type: string, minLength: 1, maxLength: 100 }
         sessionId: { type: ["string", "null"], maxLength: 200 }
+        visitorId: { type: ["string", "null"], maxLength: 100 }
         rating: { type: string, enum: [positive, negative] }
         comment: { type: ["string", "null"], maxLength: 200 }
     FeedbackResponse:
@@ -543,4 +591,46 @@ components:
               responseId: { type: string }
               comment: { type: string }
               createdAt: { type: string, format: date-time }
+    AnalyticsPeriod:
+      type: object
+      required: [uniqueVisitors, sessions, questions, screenshotQuestions, answers, expertQuestions, positiveFeedback, negativeFeedback]
+      properties:
+        uniqueVisitors: { type: number }
+        sessions: { type: number }
+        questions: { type: number }
+        screenshotQuestions: { type: number }
+        answers: { type: number }
+        expertQuestions: { type: number }
+        positiveFeedback: { type: number }
+        negativeFeedback: { type: number }
+    AnalyticsPopularQuestion:
+      type: object
+      required: [question, count]
+      properties:
+        question: { type: string }
+        count: { type: number }
+    AnalyticsLanguage:
+      type: object
+      required: [language, count]
+      properties:
+        language: { type: string }
+        count: { type: number }
+    AnalyticsStats:
+      type: object
+      required: [today, week, month, popularQuestions, languages]
+      properties:
+        today:
+          $ref: "#/components/schemas/AnalyticsPeriod"
+        week:
+          $ref: "#/components/schemas/AnalyticsPeriod"
+        month:
+          $ref: "#/components/schemas/AnalyticsPeriod"
+        popularQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsPopularQuestion"
+        languages:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsLanguage"
 

@@ -4,7 +4,7 @@ import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, 
 import { ImageAnnotator } from '../components/ImageAnnotator';
 import { InstallGuideModal, type InstallPlatform } from '../components/InstallGuideModal';
 import { SiteFooter } from '../components/SiteFooter';
-import { trackEvent } from '../lib/analytics';
+import { getAnalyticsSessionId, getVisitorId, recordPageView, trackEvent } from '../lib/analytics';
 
 const UI_COPY = {
   headline: 'Stuck in Teamcenter?',
@@ -99,6 +99,10 @@ export function AssistantPage() {
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, [isStandalone]);
 
+  useEffect(() => {
+    void recordPageView().catch(() => {});
+  }, []);
+
   const dismissInstallGuide = () => setIsInstallGuideOpen(false);
   const completeInstallGuide = async () => {
     localStorage.setItem('arya_pwa_onboarding_complete', 'true');
@@ -187,7 +191,9 @@ export function AssistantPage() {
     chat.mutate({
       data: {
         message: question.trim() || t.placeholder,
-        sessionId,
+        sessionId: sessionId || getAnalyticsSessionId(),
+        visitorId: getVisitorId(),
+        language: navigator.language?.slice(0, 20) || 'en',
         imageData: attachedImage?.data || null,
         imageMimeType: attachedImage?.mimeType || null
       }
@@ -207,6 +213,8 @@ export function AssistantPage() {
         question: submittedQuestion,
         screenshotRef: attachedImage?.name || null,
         language: navigator.language?.slice(0, 20) || 'en',
+        visitorId: getVisitorId(),
+        sessionId: getAnalyticsSessionId(),
       },
     }, {
       onSuccess: (result) => {
@@ -222,6 +230,7 @@ export function AssistantPage() {
       data: {
         responseId: reply.responseId,
         sessionId: reply.sessionId,
+        visitorId: getVisitorId(),
         rating: feedbackRating,
         comment: feedbackRating === 'negative' ? feedbackComment.trim() || null : null,
       },
@@ -241,6 +250,7 @@ export function AssistantPage() {
       data: {
         responseId: reply.responseId,
         sessionId: reply.sessionId,
+        visitorId: getVisitorId(),
         rating: 'positive',
         comment: null,
       },

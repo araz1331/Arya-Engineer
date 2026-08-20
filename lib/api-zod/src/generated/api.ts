@@ -244,11 +244,17 @@ export const BulkImportArticlesResponse = zod.object({
  * @summary Ask the Teamcenter RAG assistant
  */
 
+export const chatBodyVisitorIdMax = 100;
+
+export const chatBodyLanguageMax = 20;
+
 
 
 export const ChatBody = zod.object({
   "message": zod.string().min(1),
   "sessionId": zod.string().nullish(),
+  "visitorId": zod.string().max(chatBodyVisitorIdMax).nullish(),
+  "language": zod.string().max(chatBodyLanguageMax).nullish(),
   "imageData": zod.string().nullish().describe('Base64-encoded PNG or JPEG image without the data URL prefix'),
   "imageMimeType": zod.union([zod.literal('image/png'),zod.literal('image/jpeg'),zod.literal(null)]).nullish()
 })
@@ -277,6 +283,29 @@ export const ChatResponse = zod.object({
 
 
 /**
+ * @summary Record an anonymous product analytics event
+ */
+export const recordAnalyticsEventBodyVisitorIdMax = 100;
+
+export const recordAnalyticsEventBodySessionIdMax = 200;
+
+export const recordAnalyticsEventBodyLanguageMax = 20;
+
+
+
+export const RecordAnalyticsEventBody = zod.object({
+  "eventType": zod.enum(['page_view']),
+  "visitorId": zod.string().min(1).max(recordAnalyticsEventBodyVisitorIdMax),
+  "sessionId": zod.string().max(recordAnalyticsEventBodySessionIdMax).nullish(),
+  "language": zod.string().max(recordAnalyticsEventBodyLanguageMax).nullish()
+})
+
+export const RecordAnalyticsEventResponse = zod.object({
+  "recorded": zod.boolean()
+})
+
+
+/**
  * @summary Submit a question for Teamcenter expert follow-up
  */
 export const submitCommunityQuestionBodyQuestionMax = 10000;
@@ -286,12 +315,18 @@ export const submitCommunityQuestionBodyScreenshotRefMax = 500;
 export const submitCommunityQuestionBodyLanguageMin = 2;
 export const submitCommunityQuestionBodyLanguageMax = 20;
 
+export const submitCommunityQuestionBodyVisitorIdMax = 100;
+
+export const submitCommunityQuestionBodySessionIdMax = 200;
+
 
 
 export const SubmitCommunityQuestionBody = zod.object({
   "question": zod.string().min(1).max(submitCommunityQuestionBodyQuestionMax),
   "screenshotRef": zod.string().max(submitCommunityQuestionBodyScreenshotRefMax).nullish(),
-  "language": zod.string().min(submitCommunityQuestionBodyLanguageMin).max(submitCommunityQuestionBodyLanguageMax)
+  "language": zod.string().min(submitCommunityQuestionBodyLanguageMin).max(submitCommunityQuestionBodyLanguageMax),
+  "visitorId": zod.string().max(submitCommunityQuestionBodyVisitorIdMax).nullish(),
+  "sessionId": zod.string().max(submitCommunityQuestionBodySessionIdMax).nullish()
 })
 
 export const SubmitCommunityQuestionResponse = zod.object({
@@ -308,6 +343,8 @@ export const submitAnswerFeedbackBodyResponseIdMax = 100;
 
 export const submitAnswerFeedbackBodySessionIdMax = 200;
 
+export const submitAnswerFeedbackBodyVisitorIdMax = 100;
+
 export const submitAnswerFeedbackBodyCommentMax = 200;
 
 
@@ -315,6 +352,7 @@ export const submitAnswerFeedbackBodyCommentMax = 200;
 export const SubmitAnswerFeedbackBody = zod.object({
   "responseId": zod.string().min(1).max(submitAnswerFeedbackBodyResponseIdMax),
   "sessionId": zod.string().max(submitAnswerFeedbackBodySessionIdMax).nullish(),
+  "visitorId": zod.string().max(submitAnswerFeedbackBodyVisitorIdMax).nullish(),
   "rating": zod.enum(['positive', 'negative']),
   "comment": zod.string().max(submitAnswerFeedbackBodyCommentMax).nullish()
 })
@@ -385,6 +423,51 @@ export const GetFeedbackStatsResponse = zod.object({
   "responseId": zod.string(),
   "comment": zod.string(),
   "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Get anonymous product analytics for the admin dashboard
+ */
+export const GetAnalyticsStatsResponse = zod.object({
+  "today": zod.object({
+  "uniqueVisitors": zod.number(),
+  "sessions": zod.number(),
+  "questions": zod.number(),
+  "screenshotQuestions": zod.number(),
+  "answers": zod.number(),
+  "expertQuestions": zod.number(),
+  "positiveFeedback": zod.number(),
+  "negativeFeedback": zod.number()
+}),
+  "week": zod.object({
+  "uniqueVisitors": zod.number(),
+  "sessions": zod.number(),
+  "questions": zod.number(),
+  "screenshotQuestions": zod.number(),
+  "answers": zod.number(),
+  "expertQuestions": zod.number(),
+  "positiveFeedback": zod.number(),
+  "negativeFeedback": zod.number()
+}),
+  "month": zod.object({
+  "uniqueVisitors": zod.number(),
+  "sessions": zod.number(),
+  "questions": zod.number(),
+  "screenshotQuestions": zod.number(),
+  "answers": zod.number(),
+  "expertQuestions": zod.number(),
+  "positiveFeedback": zod.number(),
+  "negativeFeedback": zod.number()
+}),
+  "popularQuestions": zod.array(zod.object({
+  "question": zod.string(),
+  "count": zod.number()
+})),
+  "languages": zod.array(zod.object({
+  "language": zod.string(),
+  "count": zod.number()
 }))
 })
 

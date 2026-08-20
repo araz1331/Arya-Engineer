@@ -22,4 +22,14 @@ export interface CommunityQuestionInput {
      * @maxLength 20
      */
   language: string;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  visitorId?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  sessionId?: string | null;
 }

@@ -1,5 +1,5 @@
 import { createInsertSchema } from "drizzle-zod";
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
 export const articlesTable = pgTable("articles", {
@@ -40,8 +40,24 @@ export const answerFeedbackTable = pgTable("answer_feedback", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const analyticsEventsTable = pgTable("analytics_events", {
+  id: serial("id").primaryKey(),
+  eventType: text("event_type").notNull(),
+  visitorId: text("visitor_id").notNull(),
+  sessionId: text("session_id"),
+  question: text("question"),
+  language: text("language"),
+  hasScreenshot: boolean("has_screenshot").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  createdAtIdx: index("analytics_events_created_at_idx").on(table.createdAt),
+  eventTypeIdx: index("analytics_events_event_type_idx").on(table.eventType),
+  visitorIdIdx: index("analytics_events_visitor_id_idx").on(table.visitorId),
+}));
+
 export const insertArticleSchema = createInsertSchema(articlesTable).omit({ id: true });
 export type InsertArticle = z.infer<typeof insertArticleSchema>;
 export type Article = typeof articlesTable.$inferSelect;
 export type CommunityQuestion = typeof communityQuestionsTable.$inferSelect;
 export type AnswerFeedback = typeof answerFeedbackTable.$inferSelect;
+export type AnalyticsEvent = typeof analyticsEventsTable.$inferSelect;

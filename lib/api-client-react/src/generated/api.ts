@@ -21,6 +21,9 @@ import type {
 
 import type {
   AdminArticleSample,
+  AnalyticsEventInput,
+  AnalyticsEventResponse,
+  AnalyticsStats,
   Article,
   ArticleCleanupResponse,
   ArticleCount,
@@ -900,6 +903,77 @@ export const useChat = <TError = ErrorType<unknown>,
       return useMutation(getChatMutationOptions(options));
     }
 
+export const getRecordAnalyticsEventUrl = () => {
+
+
+
+
+  return `/api/analytics/events`
+}
+
+/**
+ * @summary Record an anonymous product analytics event
+ */
+export const recordAnalyticsEvent = async (analyticsEventInput: AnalyticsEventInput, options?: Parameters<typeof customFetch>[1]): Promise<AnalyticsEventResponse> => {
+
+  return customFetch<AnalyticsEventResponse>(getRecordAnalyticsEventUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(analyticsEventInput)
+  }
+);}
+
+
+
+
+
+export const getRecordAnalyticsEventMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordAnalyticsEvent>>, TError,{data: BodyType<AnalyticsEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordAnalyticsEvent>>, TError,{data: BodyType<AnalyticsEventInput>}, TContext> => {
+
+const mutationKey = ['recordAnalyticsEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordAnalyticsEvent>>, {data: BodyType<AnalyticsEventInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  recordAnalyticsEvent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordAnalyticsEventMutationResult = NonNullable<Awaited<ReturnType<typeof recordAnalyticsEvent>>>
+    export type RecordAnalyticsEventMutationBody = BodyType<AnalyticsEventInput>
+    export type RecordAnalyticsEventMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Record an anonymous product analytics event
+ */
+export const useRecordAnalyticsEvent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordAnalyticsEvent>>, TError,{data: BodyType<AnalyticsEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordAnalyticsEvent>>,
+        TError,
+        {data: BodyType<AnalyticsEventInput>},
+        TContext
+      > => {
+      return useMutation(getRecordAnalyticsEventMutationOptions(options));
+    }
+
 export const getSubmitCommunityQuestionUrl = () => {
 
 
@@ -1263,6 +1337,83 @@ export function useGetFeedbackStats<TData = Awaited<ReturnType<typeof getFeedbac
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetFeedbackStatsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAnalyticsStatsUrl = () => {
+
+
+
+
+  return `/api/admin/analytics`
+}
+
+/**
+ * @summary Get anonymous product analytics for the admin dashboard
+ */
+export const getAnalyticsStats = async ( options?: Parameters<typeof customFetch>[1]): Promise<AnalyticsStats> => {
+
+  return customFetch<AnalyticsStats>(getGetAnalyticsStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAnalyticsStatsQueryKey = () => {
+    return [
+    `/api/admin/analytics`
+    ] as const;
+    }
+
+
+export const getGetAnalyticsStatsQueryOptions = <TData = Awaited<ReturnType<typeof getAnalyticsStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAnalyticsStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAnalyticsStatsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAnalyticsStats>>> = ({ signal }) => getAnalyticsStats({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAnalyticsStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAnalyticsStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getAnalyticsStats>>>
+export type GetAnalyticsStatsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get anonymous product analytics for the admin dashboard
+ */
+
+export function useGetAnalyticsStats<TData = Awaited<ReturnType<typeof getAnalyticsStats>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAnalyticsStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAnalyticsStatsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

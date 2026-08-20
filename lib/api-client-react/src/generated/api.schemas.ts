@@ -169,12 +169,52 @@ export interface ChatInput {
   /** @nullable */
   sessionId?: string | null;
   /**
+     * @maxLength 100
+     * @nullable
+     */
+  visitorId?: string | null;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  language?: string | null;
+  /**
      * Base64-encoded PNG or JPEG image without the data URL prefix
      * @nullable
      */
   imageData?: string | null;
   /** @nullable */
   imageMimeType?: ChatInputImageMimeType;
+}
+
+export type AnalyticsEventInputEventType = typeof AnalyticsEventInputEventType[keyof typeof AnalyticsEventInputEventType];
+
+
+export const AnalyticsEventInputEventType = {
+  page_view: 'page_view',
+} as const;
+
+export interface AnalyticsEventInput {
+  eventType: AnalyticsEventInputEventType;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  visitorId: string;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  sessionId?: string | null;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  language?: string | null;
+}
+
+export interface AnalyticsEventResponse {
+  recorded: boolean;
 }
 
 export interface ChatSource {
@@ -218,6 +258,16 @@ export interface CommunityQuestionInput {
      * @maxLength 20
      */
   language: string;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  visitorId?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  sessionId?: string | null;
 }
 
 export type CommunityQuestionResponseStatus = typeof CommunityQuestionResponseStatus[keyof typeof CommunityQuestionResponseStatus];
@@ -282,6 +332,11 @@ export interface FeedbackInput {
      * @nullable
      */
   sessionId?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  visitorId?: string | null;
   rating: FeedbackInputRating;
   /**
      * @maxLength 200
@@ -306,6 +361,35 @@ export interface FeedbackStats {
   totalResponses: number;
   positivePercentage: number;
   recentNegative: FeedbackStatsRecentNegativeItem[];
+}
+
+export interface AnalyticsPeriod {
+  uniqueVisitors: number;
+  sessions: number;
+  questions: number;
+  screenshotQuestions: number;
+  answers: number;
+  expertQuestions: number;
+  positiveFeedback: number;
+  negativeFeedback: number;
+}
+
+export interface AnalyticsPopularQuestion {
+  question: string;
+  count: number;
+}
+
+export interface AnalyticsLanguage {
+  language: string;
+  count: number;
+}
+
+export interface AnalyticsStats {
+  today: AnalyticsPeriod;
+  week: AnalyticsPeriod;
+  month: AnalyticsPeriod;
+  popularQuestions: AnalyticsPopularQuestion[];
+  languages: AnalyticsLanguage[];
 }
 
 export type ListArticlesParams = {

@@ -3,11 +3,11 @@ import {
   useGetStats, useListArticles,
   useCreateArticle, useImportPdfArticle, useBulkImportArticles,
   useGetArticleCount, useListCommunityQuestions, useAnswerCommunityQuestion, useGetFeedbackStats,
-  getGetStatsQueryKey, getGetArticleCountQueryKey
+  useGetAnalyticsStats, getGetStatsQueryKey, getGetArticleCountQueryKey, getGetAnalyticsStatsQueryKey
 } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 import { 
-  Activity, Database, Upload, ChevronLeft,
+  Activity, BarChart3, Database, Upload, ChevronLeft,
   Plus, Search as SearchIcon, AlertCircle, Wrench, MessageCircle, ThumbsDown
 } from 'lucide-react';
 
@@ -50,10 +50,106 @@ export function AdminPage() {
         </div>
 
         <CorpusIngestion onRefresh={() => { stats.refetch(); countQuery.refetch(); }} />
+        <AnalyticsPanel />
         <CommunityPanel />
         <ArticleList />
       </main>
     </div>
+  );
+}
+
+function AnalyticsPanel() {
+  const analytics = useGetAnalyticsStats({
+    query: {
+      queryKey: getGetAnalyticsStatsQueryKey(),
+      refetchInterval: 60000,
+    },
+  });
+  const data = analytics.data;
+  const month = data?.month;
+  const periodCards = [
+    { label: 'Today', value: data?.today.uniqueVisitors },
+    { label: 'Last 7 days', value: data?.week.uniqueVisitors },
+    { label: 'This month', value: data?.month.uniqueVisitors },
+  ];
+  const metricCards = [
+    { label: 'Sessions (month)', value: month?.sessions },
+    { label: 'Questions asked', value: month?.questions },
+    { label: 'Questions with screenshots', value: month?.screenshotQuestions },
+    { label: 'Answers delivered', value: month?.answers },
+    { label: 'Expert handoffs', value: month?.expertQuestions },
+    { label: 'Positive ratings', value: month?.positiveFeedback },
+    { label: 'Negative ratings', value: month?.negativeFeedback },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <span className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Analytics</span>
+          <p className="mt-1 text-sm text-muted-foreground">Anonymous product usage, refreshed every minute.</p>
+        </div>
+        <BarChart3 className="h-5 w-5 text-primary" />
+      </div>
+
+      {analytics.isLoading ? (
+        <div className="py-8 text-center text-sm text-muted-foreground">Loading analytics…</div>
+      ) : analytics.isError ? (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+          Analytics could not be loaded.
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {periodCards.map((card) => (
+              <div key={card.label} className="rounded-2xl border border-border bg-background p-5">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Unique visitors</div>
+                <div className="mt-2 text-3xl font-light">{card.value ?? 0}</div>
+                <div className="mt-1 text-sm text-muted-foreground">{card.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {metricCards.map((card) => (
+              <div key={card.label} className="rounded-xl border border-border/70 bg-background/70 p-4">
+                <div className="text-2xl font-light">{card.value ?? 0}</div>
+                <div className="mt-1 text-xs leading-5 text-muted-foreground">{card.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div>
+              <h3 className="mb-3 text-sm font-semibold">Popular questions this month</h3>
+              {data?.popularQuestions.length ? (
+                <div className="space-y-2">
+                  {data.popularQuestions.map((item) => (
+                    <div key={item.question} className="flex items-start justify-between gap-4 rounded-xl bg-background/70 p-3 text-sm">
+                      <span className="leading-5">{item.question}</span>
+                      <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">{item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <div className="rounded-xl bg-background/70 p-4 text-sm text-muted-foreground">No questions recorded yet.</div>}
+            </div>
+            <div>
+              <h3 className="mb-3 text-sm font-semibold">User languages this month</h3>
+              {data?.languages.length ? (
+                <div className="space-y-2">
+                  {data.languages.map((item) => (
+                    <div key={item.language} className="flex items-center justify-between rounded-xl bg-background/70 p-3 text-sm">
+                      <span>{item.language}</span>
+                      <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">{item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <div className="rounded-xl bg-background/70 p-4 text-sm text-muted-foreground">No language data recorded yet.</div>}
+            </div>
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 

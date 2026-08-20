@@ -5,28 +5,23 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { FeedbackInputRating } from './feedbackInputRating';
+import type { AnalyticsEventInputEventType } from './analyticsEventInputEventType';
 
-export interface FeedbackInput {
+export interface AnalyticsEventInput {
+  eventType: AnalyticsEventInputEventType;
   /**
      * @minLength 1
      * @maxLength 100
      */
-  responseId: string;
+  visitorId: string;
   /**
      * @maxLength 200
      * @nullable
      */
   sessionId?: string | null;
   /**
-     * @maxLength 100
+     * @maxLength 20
      * @nullable
      */
-  visitorId?: string | null;
-  rating: FeedbackInputRating;
-  /**
-     * @maxLength 200
-     * @nullable
-     */
-  comment?: string | null;
+  language?: string | null;
 }

@@ -1,10 +1,10 @@
 import { Router, type IRouter } from "express";
 import { timingSafeEqual } from "node:crypto";
-import { count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { ai } from "@workspace/integrations-gemini-ai";
-import { db, articlesTable, answerFeedbackTable, communityQuestionsTable } from "@workspace/db";
-import { AnswerCommunityQuestionBody, AnswerCommunityQuestionParams, AnswerCommunityQuestionResponse, BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, GetArticleCountResponse, GetFeedbackStatsResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, ListCommunityQuestionsQueryParams, ListCommunityQuestionsResponse, LoginBody, LoginResponse, SubmitAnswerFeedbackBody, SubmitAnswerFeedbackResponse, SubmitCommunityQuestionBody, SubmitCommunityQuestionResponse } from "@workspace/api-zod";
+import { db, analyticsEventsTable, articlesTable, answerFeedbackTable, communityQuestionsTable } from "@workspace/db";
+import { AnswerCommunityQuestionBody, AnswerCommunityQuestionParams, AnswerCommunityQuestionResponse, BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, GetAnalyticsStatsResponse, GetArticleCountResponse, GetFeedbackStatsResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, ListCommunityQuestionsQueryParams, ListCommunityQuestionsResponse, LoginBody, LoginResponse, RecordAnalyticsEventBody, RecordAnalyticsEventResponse, SubmitAnswerFeedbackBody, SubmitAnswerFeedbackResponse, SubmitCommunityQuestionBody, SubmitCommunityQuestionResponse } from "@workspace/api-zod";
 import { getArticleList, searchArticles, toArticleResponse, extractRelatedVideos } from "../lib/knowledge";
 import { cleanContent } from "../lib/content";
 
@@ -71,6 +71,52 @@ function passwordsMatch(candidate: string, expected: string | undefined): boolea
   return candidateBuffer.length === expectedBuffer.length && timingSafeEqual(candidateBuffer, expectedBuffer);
 }
 
+type AnalyticsEventValues = {
+  eventType: string;
+  visitorId: string | null | undefined;
+  sessionId?: string | null;
+  question?: string | null;
+  language?: string | null;
+  hasScreenshot?: boolean;
+};
+
+async function recordAnalyticsEvent(values: AnalyticsEventValues): Promise<void> {
+  const visitorId = values.visitorId?.trim();
+  if (!visitorId) return;
+  await db.insert(analyticsEventsTable).values({
+    eventType: values.eventType,
+    visitorId,
+    sessionId: values.sessionId?.trim() || null,
+    question: values.question?.trim() || null,
+    language: values.language?.trim().toLowerCase() || null,
+    hasScreenshot: values.hasScreenshot ?? false,
+  });
+}
+
+async function getAnalyticsPeriod(start: Date) {
+  const [row] = await db.select({
+    uniqueVisitors: sql<number>`count(distinct ${analyticsEventsTable.visitorId})`,
+    sessions: sql<number>`count(distinct ${analyticsEventsTable.sessionId})`,
+    questions: sql<number>`count(*) filter (where ${analyticsEventsTable.eventType} = 'question_asked')`,
+    screenshotQuestions: sql<number>`count(*) filter (where ${analyticsEventsTable.eventType} = 'question_asked' and ${analyticsEventsTable.hasScreenshot} = true)`,
+    answers: sql<number>`count(*) filter (where ${analyticsEventsTable.eventType} = 'answer_received')`,
+    expertQuestions: sql<number>`count(*) filter (where ${analyticsEventsTable.eventType} = 'community_question_submitted')`,
+    positiveFeedback: sql<number>`count(*) filter (where ${analyticsEventsTable.eventType} = 'feedback_positive')`,
+    negativeFeedback: sql<number>`count(*) filter (where ${analyticsEventsTable.eventType} = 'feedback_negative')`,
+  }).from(analyticsEventsTable).where(gte(analyticsEventsTable.createdAt, start));
+
+  return {
+    uniqueVisitors: Number(row?.uniqueVisitors ?? 0),
+    sessions: Number(row?.sessions ?? 0),
+    questions: Number(row?.questions ?? 0),
+    screenshotQuestions: Number(row?.screenshotQuestions ?? 0),
+    answers: Number(row?.answers ?? 0),
+    expertQuestions: Number(row?.expertQuestions ?? 0),
+    positiveFeedback: Number(row?.positiveFeedback ?? 0),
+    negativeFeedback: Number(row?.negativeFeedback ?? 0),
+  };
+}
+
 router.post("/auth/login", async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
@@ -90,6 +136,21 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     authenticated: true,
     area: parsed.data.area,
   }));
+});
+
+router.post("/analytics/events", async (req, res): Promise<void> => {
+  const parsed = RecordAnalyticsEventBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  await recordAnalyticsEvent({
+    eventType: parsed.data.eventType,
+    visitorId: parsed.data.visitorId,
+    sessionId: parsed.data.sessionId,
+    language: parsed.data.language,
+  });
+  res.status(201).json(RecordAnalyticsEventResponse.parse({ recorded: true }));
 });
 
 router.get("/stats", async (_req, res): Promise<void> => {
@@ -303,7 +364,21 @@ router.post("/chat", async (req, res): Promise<void> => {
   const communityHandoff = relevantMatches.length === 0;
   const sessionId = parsed.data.sessionId ?? crypto.randomUUID();
   const responseId = crypto.randomUUID();
+  const analyticsLanguage = parsed.data.language?.trim().toLowerCase() || "en";
+  await recordAnalyticsEvent({
+    eventType: "question_asked",
+    visitorId: parsed.data.visitorId,
+    sessionId,
+    question: parsed.data.message,
+    language: analyticsLanguage,
+    hasScreenshot: Boolean(parsed.data.imageData),
+  });
   if (communityHandoff) {
+    await recordAnalyticsEvent({
+      eventType: "answer_received",
+      visitorId: parsed.data.visitorId,
+      sessionId,
+    });
     res.json(ChatResponse.parse({
       answer: "I couldn't find a specific solution for this error in my knowledge base. Please send this to our community for expert help.",
       sessionId,
@@ -336,6 +411,11 @@ Help with Teamcenter installation, configuration, troubleshooting, integrations 
       : "I could not find a relevant Teamcenter reference in the indexed knowledge base.";
   }
   answer = replaceNumberedSourcesWithTitles(answer, matches);
+  await recordAnalyticsEvent({
+    eventType: "answer_received",
+    visitorId: parsed.data.visitorId,
+    sessionId,
+  });
   res.json(ChatResponse.parse({
     answer,
     sessionId,
@@ -358,6 +438,14 @@ router.post("/community/questions", async (req, res): Promise<void> => {
     language: parsed.data.language.trim().toLowerCase(),
     status: "pending",
   }).returning({ id: communityQuestionsTable.id });
+  await recordAnalyticsEvent({
+    eventType: "community_question_submitted",
+    visitorId: parsed.data.visitorId,
+    sessionId: parsed.data.sessionId,
+    question: parsed.data.question,
+    language: parsed.data.language,
+    hasScreenshot: Boolean(parsed.data.screenshotRef),
+  });
   res.status(201).json(SubmitCommunityQuestionResponse.parse({
     id: question.id,
     status: "pending",
@@ -377,7 +465,58 @@ router.post("/feedback", async (req, res): Promise<void> => {
     rating: parsed.data.rating,
     comment: parsed.data.comment?.trim() || null,
   }).returning({ id: answerFeedbackTable.id });
+  await recordAnalyticsEvent({
+    eventType: `feedback_${parsed.data.rating}`,
+    visitorId: parsed.data.visitorId,
+    sessionId: parsed.data.sessionId,
+  });
   res.status(201).json(SubmitAnswerFeedbackResponse.parse({ id: feedback.id, recorded: true }));
+});
+
+router.get("/admin/analytics", async (_req, res): Promise<void> => {
+  const now = new Date();
+  const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setUTCDate(startOfWeek.getUTCDate() - 6);
+  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+  const [today, week, month] = await Promise.all([
+    getAnalyticsPeriod(startOfToday),
+    getAnalyticsPeriod(startOfWeek),
+    getAnalyticsPeriod(startOfMonth),
+  ]);
+  const popularQuestions = await db.select({
+    question: analyticsEventsTable.question,
+    count: count(),
+  }).from(analyticsEventsTable)
+    .where(and(
+      gte(analyticsEventsTable.createdAt, startOfMonth),
+      eq(analyticsEventsTable.eventType, "question_asked"),
+      isNotNull(analyticsEventsTable.question),
+    ))
+    .groupBy(analyticsEventsTable.question)
+    .orderBy(desc(count()))
+    .limit(10);
+  const languages = await db.select({
+    language: analyticsEventsTable.language,
+    count: count(),
+  }).from(analyticsEventsTable)
+    .where(and(
+      gte(analyticsEventsTable.createdAt, startOfMonth),
+      eq(analyticsEventsTable.eventType, "question_asked"),
+      isNotNull(analyticsEventsTable.language),
+    ))
+    .groupBy(analyticsEventsTable.language)
+    .orderBy(desc(count()))
+    .limit(10);
+
+  res.json(GetAnalyticsStatsResponse.parse({
+    today,
+    week,
+    month,
+    popularQuestions: popularQuestions.map((item) => ({ question: item.question ?? "", count: Number(item.count) })),
+    languages: languages.map((item) => ({ language: item.language ?? "unknown", count: Number(item.count) })),
+  }));
 });
 
 function toCommunityQuestionResponse(question: typeof communityQuestionsTable.$inferSelect) {

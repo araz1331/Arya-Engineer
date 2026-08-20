@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { ArrowRight, Camera, Database, Globe2, ListChecks, Smartphone, Users, Wrench } from 'lucide-react';
+import { recordPageView } from '../lib/analytics';
 
 const pageTitle = 'Arya Engineer — AI Assistant for Teamcenter';
 const pageDescription = 'Instant answers to any Teamcenter question, in any language, from your phone or desktop.';
 
 export function AboutPage() {
   useEffect(() => {
+    void recordPageView().catch(() => {});
     const previousTitle = document.title;
     const description = document.querySelector('meta[name="description"]');
     const canonical = document.querySelector('link[rel="canonical"]');
