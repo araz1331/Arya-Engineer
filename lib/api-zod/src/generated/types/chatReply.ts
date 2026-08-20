@@ -6,9 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ChatSource } from './chatSource';
+import type { ChatVideo } from './chatVideo';
 
 export interface ChatReply {
   answer: string;
   sources: ChatSource[];
+  /** @maxItems 2 */
+  videos: ChatVideo[];
   sessionId: string;
 }

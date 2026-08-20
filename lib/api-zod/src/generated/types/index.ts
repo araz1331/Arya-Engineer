@@ -19,6 +19,7 @@ export * from './chatInput';
 export * from './chatInputImageMimeType';
 export * from './chatReply';
 export * from './chatSource';
+export * from './chatVideo';
 export * from './healthStatus';
 export * from './knowledgeStats';
 export * from './listArticlesParams';

@@ -5,7 +5,7 @@ import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mj
 import { ai } from "@workspace/integrations-gemini-ai";
 import { db, articlesTable, scraperProgressTable } from "@workspace/db";
 import { BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, DebugScrapeResponse, GetArticleCountResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, LoginBody, LoginResponse, SeedScrapeUrlsBody, SeedScrapeUrlsResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
-import { getArticleList, searchArticles, ensureStarterArticles, toArticleResponse } from "../lib/knowledge";
+import { getArticleList, searchArticles, ensureStarterArticles, toArticleResponse, extractRelatedVideos } from "../lib/knowledge";
 import { debugScrape, getScraperStatus, runScraper, seedArticleUrls } from "../lib/scraper";
 
 const router: IRouter = Router();
@@ -266,6 +266,7 @@ Help with Teamcenter installation, configuration, troubleshooting, integrations 
     answer,
     sessionId,
     sources: matches.map(({ article, score }) => ({ id: article.id, title: article.title, url: article.url, category: article.category, score })),
+    videos: extractRelatedVideos(matches),
   }));
 });
 

@@ -383,15 +383,26 @@ components:
         url: { type: ["string", "null"] }
         category: { type: ["string", "null"] }
         score: { type: number }
+    ChatVideo:
+      type: object
+      required: [title, url]
+      properties:
+        title: { type: string }
+        url: { type: string }
     ChatReply:
       type: object
-      required: [answer, sources, sessionId]
+      required: [answer, sources, videos, sessionId]
       properties:
         answer: { type: string }
         sources:
           type: array
           items:
             $ref: "#/components/schemas/ChatSource"
+        videos:
+          type: array
+          maxItems: 2
+          items:
+            $ref: "#/components/schemas/ChatVideo"
         sessionId: { type: string }
     ScrapeStatus:
       type: object

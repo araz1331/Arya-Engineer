@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useChat } from '@workspace/api-client-react';
-import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, AlertCircle, ShieldCheck, Mic, MicOff, Download } from 'lucide-react';
+import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, AlertCircle, ShieldCheck, Mic, MicOff, Download, Video } from 'lucide-react';
 import { ImageAnnotator } from '../components/ImageAnnotator';
 import { InstallGuideModal, type InstallPlatform } from '../components/InstallGuideModal';
 
@@ -280,6 +280,25 @@ export function AssistantPage() {
                   >
                     <LinkIcon className="h-3.5 w-3.5 shrink-0 text-primary" />
                     <span className="truncate">{s.title}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {reply.videos && reply.videos.length > 0 && (
+            <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div className="space-y-2">
+                {reply.videos.slice(0, 2).map((video: { title: string; url: string }) => (
+                  <a
+                    key={video.url}
+                    href={video.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-start gap-2 text-sm font-medium text-primary hover:underline"
+                  >
+                    <Video className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>📹 Related video: {video.title}</span>
                   </a>
                 ))}
               </div>

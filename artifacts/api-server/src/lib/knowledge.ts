@@ -70,3 +70,58 @@ export function toArticleResponse(article: typeof articlesTable.$inferSelect) {
     sourceUpdatedAt: article.sourceUpdatedAt,
   };
 }
+
+type ArticleMatch = { article: typeof articlesTable.$inferSelect };
+
+const VIDEO_FILE_PATTERN = /\.(?:mp4|webm|mov|m4v|m3u8)(?:[?#].*)?$/i;
+const VIDEO_HOST_PATTERN = /(^|\.)((youtube\.com)|(youtu\.be)|(vimeo\.com)|(loom\.com)|(wistia\.com)|(vidyard\.com))$/i;
+
+function normalizeVideoUrl(value: string): string | null {
+  const normalized = value.replace(/&amp;/g, "&").replace(/[.,!?;:'"]+$/g, "");
+  try {
+    const url = new URL(normalized);
+    if (!["http:", "https:"].includes(url.protocol)) return null;
+    if (!VIDEO_HOST_PATTERN.test(url.hostname) && !VIDEO_FILE_PATTERN.test(url.pathname)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function cleanVideoTitle(value: string | undefined, fallback: string): string {
+  const title = value?.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  return title || fallback;
+}
+
+export function extractRelatedVideos(matches: ArticleMatch[], limit = 2) {
+  const videos: Array<{ title: string; url: string }> = [];
+  const seen = new Set<string>();
+  const addVideo = (rawUrl: string, rawTitle: string | undefined, articleTitle: string) => {
+    const url = normalizeVideoUrl(rawUrl);
+    if (!url || seen.has(url) || videos.length >= limit) return;
+    seen.add(url);
+    let fallback = "Teamcenter video";
+    try {
+      fallback = `${new URL(url).hostname.replace(/^www\./, "")} video`;
+    } catch {
+      // normalizeVideoUrl already validates the URL.
+    }
+    videos.push({ title: cleanVideoTitle(rawTitle, cleanVideoTitle(articleTitle, fallback)), url });
+  };
+
+  for (const { article } of matches) {
+    const content = article.content ?? "";
+    const markdownLinks = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/gi;
+    const htmlLinks = /<a\b[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    const iframeLinks = /<iframe\b[^>]*src=["'](https?:\/\/[^"']+)["'][^>]*>/gi;
+    const rawUrls = /https?:\/\/[^\s<>"')]+/gi;
+
+    for (const match of content.matchAll(markdownLinks)) addVideo(match[2], match[1], article.title);
+    for (const match of content.matchAll(htmlLinks)) addVideo(match[1], match[2], article.title);
+    for (const match of content.matchAll(iframeLinks)) addVideo(match[1], undefined, article.title);
+    for (const match of content.matchAll(rawUrls)) addVideo(match[0], undefined, article.title);
+    if (videos.length >= limit) break;
+  }
+
+  return videos;
+}

@@ -206,9 +206,16 @@ export interface ChatSource {
   score: number;
 }
 
+export interface ChatVideo {
+  title: string;
+  url: string;
+}
+
 export interface ChatReply {
   answer: string;
   sources: ChatSource[];
+  /** @maxItems 2 */
+  videos: ChatVideo[];
   sessionId: string;
 }
 

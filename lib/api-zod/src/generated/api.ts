@@ -226,6 +226,10 @@ export const ChatBody = zod.object({
   "imageMimeType": zod.union([zod.literal('image/png'),zod.literal('image/jpeg'),zod.literal(null)]).nullish()
 })
 
+export const chatResponseVideosMax = 2;
+
+
+
 export const ChatResponse = zod.object({
   "answer": zod.string(),
   "sources": zod.array(zod.object({
@@ -235,6 +239,10 @@ export const ChatResponse = zod.object({
   "category": zod.string().nullable(),
   "score": zod.number()
 })),
+  "videos": zod.array(zod.object({
+  "title": zod.string(),
+  "url": zod.string()
+})).max(chatResponseVideosMax),
   "sessionId": zod.string()
 })
 
