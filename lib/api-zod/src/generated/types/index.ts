@@ -11,7 +11,6 @@ export * from './article';
 export * from './articleCleanupResponse';
 export * from './articleCount';
 export * from './articleInput';
-export * from './articleQualityCleanupResponse';
 export * from './authSession';
 export * from './authSessionArea';
 export * from './bulkArticleImportArray';

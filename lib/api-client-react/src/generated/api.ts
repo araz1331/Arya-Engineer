@@ -25,7 +25,6 @@ import type {
   ArticleCleanupResponse,
   ArticleCount,
   ArticleInput,
-  ArticleQualityCleanupResponse,
   AuthSession,
   BulkArticleImportArray,
   BulkArticleImportInput,
@@ -690,77 +689,6 @@ export const useCleanAllAdminArticles = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCleanAllAdminArticlesMutationOptions(options));
-    }
-
-export const getCleanupAdminArticlesUrl = () => {
-
-
-
-
-  return `/api/admin/cleanup`
-}
-
-/**
- * @summary Remove low-quality articles from the indexed corpus
- */
-export const cleanupAdminArticles = async ( options?: Parameters<typeof customFetch>[1]): Promise<ArticleQualityCleanupResponse> => {
-
-  return customFetch<ArticleQualityCleanupResponse>(getCleanupAdminArticlesUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-
-export const getCleanupAdminArticlesMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cleanupAdminArticles>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof cleanupAdminArticles>>, TError,void, TContext> => {
-
-const mutationKey = ['cleanupAdminArticles'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cleanupAdminArticles>>, void> = () => {
-
-
-          return  cleanupAdminArticles(requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CleanupAdminArticlesMutationResult = NonNullable<Awaited<ReturnType<typeof cleanupAdminArticles>>>
-
-    export type CleanupAdminArticlesMutationError = ErrorType<unknown>
-
-    /**
- * @summary Remove low-quality articles from the indexed corpus
- */
-export const useCleanupAdminArticles = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cleanupAdminArticles>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof cleanupAdminArticles>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getCleanupAdminArticlesMutationOptions(options));
     }
 
 export const getImportPdfArticleUrl = () => {

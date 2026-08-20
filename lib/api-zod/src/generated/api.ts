@@ -155,15 +155,6 @@ export const CleanAllAdminArticlesResponse = zod.object({
 
 
 /**
- * @summary Remove low-quality articles from the indexed corpus
- */
-export const CleanupAdminArticlesResponse = zod.object({
-  "removed": zod.number(),
-  "remaining": zod.number()
-})
-
-
-/**
  * @summary Extract and save a PDF as a knowledge article
  */
 export const importPdfArticleBodyFilenameMax = 255;

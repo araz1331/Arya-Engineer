@@ -172,11 +172,6 @@ export interface ArticleCleanupResponse {
   cleaned: number;
 }
 
-export interface ArticleQualityCleanupResponse {
-  removed: number;
-  remaining: number;
-}
-
 export interface CategoryCount {
   name: string;
   count: number;
