@@ -11,7 +11,7 @@ A bilingual Teamcenter support workspace that grounds consultant answers in an i
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
 - Required env: `SIEMENS_CURL` — browser cURL session used by the GTAC scraper
-- AI is provided through Replit's managed Gemini integration (`AI_INTEGRATIONS_GEMINI_BASE_URL` and `AI_INTEGRATIONS_GEMINI_API_KEY`)
+- Claude Sonnet 4.6 generates text answers through `ANTHROPIC_API_KEY`; Gemini Flash remains reserved for screenshot/vision analysis through the managed Gemini integration
 
 ## Stack
 
@@ -34,7 +34,7 @@ A bilingual Teamcenter support workspace that grounds consultant answers in an i
 ## Architecture decisions
 
 - The frontend uses generated React Query hooks from the OpenAPI contract; it does not hand-roll API response types.
-- Gemini generates the answer, while retrieval currently uses a database-backed lexical ranker so the first-run product works without unsupported embedding calls.
+- Claude Sonnet 4.6 generates grounded text answers, Gemini Flash handles screenshot analysis, and retrieval currently uses a database-backed lexical ranker so the first-run product works without unsupported embedding calls.
 - Scraper progress is persisted per page and the scraper is guarded against concurrent runs.
 - Starter articles keep the workspace useful before the first authenticated GTAC scrape, while real scraped URLs remain unique.
 

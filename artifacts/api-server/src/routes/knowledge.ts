@@ -11,19 +11,45 @@ import { cleanContent } from "../lib/content";
 
 const router: IRouter = Router();
 
+type ClaudeTextResponse = {
+  content?: Array<{ type?: string; text?: string }>;
+};
+
+async function generateClaudeText(prompt: string): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured.");
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 8192,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Claude returned ${response.status}: ${(await response.text()).slice(0, 500)}`);
+  }
+  const payload = await response.json() as ClaudeTextResponse;
+  return payload.content
+    ?.filter((block) => block.type === "text")
+    .map((block) => block.text ?? "")
+    .join("")
+    .trim() ?? "";
+}
+
 async function translateQueryForSearch(query: string): Promise<string> {
   const trimmedQuery = query.trim();
   if (!trimmedQuery) return trimmedQuery;
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{
-        role: "user",
-        parts: [{ text: `Translate to English for technical search: ${trimmedQuery}` }],
-      }],
-      config: { maxOutputTokens: 512 },
-    });
-    return response.text?.trim() || trimmedQuery;
+    return await generateClaudeText(
+      `Translate the following Teamcenter support question to English for technical search. Preserve every error code, API name, identifier, and quoted phrase exactly. Return only the translated search query.\n\n${trimmedQuery}`,
+    ) || trimmedQuery;
   } catch {
     return trimmedQuery;
   }
@@ -308,12 +334,7 @@ ${sourceGuidance}
 Help with Teamcenter installation, configuration, troubleshooting, integrations and daily usage. Do not use numbered source markers such as [Source 1]. If you mention a source, use its exact article title instead.${parsed.data.imageData ? " The user uploaded a screenshot; incorporate the image analysis into your answer and clearly describe what the screenshot shows before proposing a solution." : ""}\n\nImage analysis:\n${imageAnalysis || "No image uploaded."}\n\nKnowledge base:\n${context}\n\nUser question:\n${parsed.data.message}`;
   let answer = "";
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { maxOutputTokens: 8192 },
-    });
-    answer = response.text ?? "";
+    answer = await generateClaudeText(prompt);
   } catch {
     answer = matches.length
       ? `Based on the indexed Teamcenter references: ${matches[0].article.content}`
