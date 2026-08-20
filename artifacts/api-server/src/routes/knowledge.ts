@@ -3,8 +3,8 @@ import { timingSafeEqual } from "node:crypto";
 import { count, desc, eq, sql } from "drizzle-orm";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { ai } from "@workspace/integrations-gemini-ai";
-import { db, articlesTable, scraperProgressTable } from "@workspace/db";
-import { BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, DebugScrapeResponse, GetArticleCountResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, LoginBody, LoginResponse, SeedScrapeUrlsBody, SeedScrapeUrlsResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
+import { db, articlesTable, answerFeedbackTable, communityQuestionsTable, scraperProgressTable } from "@workspace/db";
+import { AnswerCommunityQuestionBody, AnswerCommunityQuestionParams, AnswerCommunityQuestionResponse, BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, DebugScrapeResponse, GetArticleCountResponse, GetFeedbackStatsResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, ListCommunityQuestionsQueryParams, ListCommunityQuestionsResponse, LoginBody, LoginResponse, SeedScrapeUrlsBody, SeedScrapeUrlsResponse, StartScrapeResponse, SubmitAnswerFeedbackBody, SubmitAnswerFeedbackResponse, SubmitCommunityQuestionBody, SubmitCommunityQuestionResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
 import { getArticleList, searchArticles, ensureStarterArticles, toArticleResponse, extractRelatedVideos } from "../lib/knowledge";
 import { debugScrape, getScraperStatus, runScraper, seedArticleUrls, subscribeScraperProgress } from "../lib/scraper";
 import { cleanContent } from "../lib/content";
@@ -279,6 +279,7 @@ router.post("/chat", async (req, res): Promise<void> => {
   const bestMatchScore = retrievedMatches[0]?.score ?? 0;
   const communityHandoff = bestMatchScore < 0.7;
   const sessionId = parsed.data.sessionId ?? crypto.randomUUID();
+  const responseId = crypto.randomUUID();
   if (communityHandoff) {
     res.json(ChatResponse.parse({
       answer: "I couldn't find a specific solution for this error in my knowledge base. Please send this to our community for expert help.",
@@ -286,6 +287,7 @@ router.post("/chat", async (req, res): Promise<void> => {
       sources: [],
       videos: [],
       communityHandoff: true,
+      responseId,
     }));
     return;
   }
@@ -322,6 +324,121 @@ Help with Teamcenter installation, configuration, troubleshooting, integrations 
     sources: matches.map(({ article, score }) => ({ id: article.id, title: article.title, url: article.url, category: article.category, score })),
     videos: extractRelatedVideos(matches),
     communityHandoff: false,
+    responseId,
+  }));
+});
+
+router.post("/community/questions", async (req, res): Promise<void> => {
+  const parsed = SubmitCommunityQuestionBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [question] = await db.insert(communityQuestionsTable).values({
+    question: parsed.data.question.trim(),
+    screenshotRef: parsed.data.screenshotRef?.trim() || null,
+    language: parsed.data.language.trim().toLowerCase(),
+    status: "pending",
+  }).returning({ id: communityQuestionsTable.id });
+  res.status(201).json(SubmitCommunityQuestionResponse.parse({
+    id: question.id,
+    status: "pending",
+    confirmation: "Your question has been sent to the community. A Teamcenter expert will review it.",
+  }));
+});
+
+router.post("/feedback", async (req, res): Promise<void> => {
+  const parsed = SubmitAnswerFeedbackBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [feedback] = await db.insert(answerFeedbackTable).values({
+    responseId: parsed.data.responseId,
+    sessionId: parsed.data.sessionId ?? null,
+    rating: parsed.data.rating,
+    comment: parsed.data.comment?.trim() || null,
+  }).returning({ id: answerFeedbackTable.id });
+  res.status(201).json(SubmitAnswerFeedbackResponse.parse({ id: feedback.id, recorded: true }));
+});
+
+function toCommunityQuestionResponse(question: typeof communityQuestionsTable.$inferSelect) {
+  return {
+    id: question.id,
+    question: question.question,
+    screenshotRef: question.screenshotRef,
+    language: question.language,
+    status: question.status as "pending" | "answered",
+    answer: question.answer,
+    answeredAt: question.answeredAt,
+    createdAt: question.createdAt,
+  };
+}
+
+router.get("/admin/community/questions", async (req, res): Promise<void> => {
+  const parsed = ListCommunityQuestionsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const query = db.select().from(communityQuestionsTable).orderBy(desc(communityQuestionsTable.createdAt));
+  const questions = parsed.data.status === "all"
+    ? await query
+    : await query.where(eq(communityQuestionsTable.status, parsed.data.status));
+  res.json(ListCommunityQuestionsResponse.parse(questions.map(toCommunityQuestionResponse)));
+});
+
+router.post("/admin/community/questions/:id/answer", async (req, res): Promise<void> => {
+  const params = AnswerCommunityQuestionParams.safeParse(req.params);
+  const parsed = AnswerCommunityQuestionBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [question] = await db.select().from(communityQuestionsTable).where(eq(communityQuestionsTable.id, params.data.id)).limit(1);
+  if (!question) {
+    res.status(404).json({ error: "Community question not found." });
+    return;
+  }
+  const answeredAt = new Date();
+  const answer = parsed.data.answer.trim();
+  const [updated] = await db.transaction(async (tx) => {
+    await tx.insert(articlesTable).values({
+      title: `Community answer: ${question.question.slice(0, 120)}`,
+      content: cleanContent(answer),
+      category: "Community Answers",
+      tags: ["community", "expert answer", question.language],
+      url: null,
+    });
+    return tx.update(communityQuestionsTable)
+      .set({ answer, status: "answered", answeredAt, updatedAt: answeredAt })
+      .where(eq(communityQuestionsTable.id, question.id))
+      .returning();
+  });
+  res.json(AnswerCommunityQuestionResponse.parse(toCommunityQuestionResponse(updated)));
+});
+
+router.get("/admin/feedback/stats", async (_req, res): Promise<void> => {
+  const [total] = await db.select({ total: count() }).from(answerFeedbackTable);
+  const [positive] = await db.select({ total: count() }).from(answerFeedbackTable).where(eq(answerFeedbackTable.rating, "positive"));
+  const recentNegative = await db.select({
+    id: answerFeedbackTable.id,
+    responseId: answerFeedbackTable.responseId,
+    comment: answerFeedbackTable.comment,
+    createdAt: answerFeedbackTable.createdAt,
+  }).from(answerFeedbackTable)
+    .where(eq(answerFeedbackTable.rating, "negative"))
+    .orderBy(desc(answerFeedbackTable.createdAt))
+    .limit(10);
+  const totalResponses = Number(total?.total ?? 0);
+  res.json(GetFeedbackStatsResponse.parse({
+    totalResponses,
+    positivePercentage: totalResponses ? Math.round((Number(positive?.total ?? 0) / totalResponses) * 1000) / 10 : 0,
+    recentNegative: recentNegative.map((item) => ({ ...item, comment: item.comment ?? "" })),
   }));
 });
 

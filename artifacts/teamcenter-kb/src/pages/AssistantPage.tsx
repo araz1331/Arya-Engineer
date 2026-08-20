@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { useChat } from '@workspace/api-client-react';
-import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, AlertCircle, ShieldCheck, Mic, MicOff, Download, Video } from 'lucide-react';
+import { useChat, useSubmitAnswerFeedback, useSubmitCommunityQuestion } from '@workspace/api-client-react';
+import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, AlertCircle, ShieldCheck, Mic, MicOff, Download, Video, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { ImageAnnotator } from '../components/ImageAnnotator';
 import { InstallGuideModal, type InstallPlatform } from '../components/InstallGuideModal';
 
@@ -21,6 +21,11 @@ const UI_COPY = {
   analyzingCopy: 'Looking at your Teamcenter issue now.',
   listening: 'Listening…',
   voiceLabel: 'Speak your question',
+  community: 'Send to community — get answer from a Teamcenter expert',
+  feedbackPrompt: 'Was this answer helpful?',
+  feedbackThanks: 'Thanks for the feedback.',
+  feedbackComment: 'What could be improved? (optional)',
+  feedbackSend: 'Send feedback',
 };
 
 type SpeechRecognitionLike = {
@@ -52,11 +57,16 @@ export function AssistantPage() {
   const [isListening, setIsListening] = useState(false);
   const [isInstallGuideOpen, setIsInstallGuideOpen] = useState(false);
   const [installPlatform, setInstallPlatform] = useState<InstallPlatform>('desktop');
+  const [communityConfirmation, setCommunityConfirmation] = useState('');
+  const [feedbackRating, setFeedbackRating] = useState<'positive' | 'negative' | null>(null);
+  const [feedbackComment, setFeedbackComment] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const deferredInstallPromptRef = useRef<BeforeInstallPromptLike | null>(null);
   const chat = useChat();
+  const communityQuestion = useSubmitCommunityQuestion();
+  const answerFeedback = useSubmitAnswerFeedback();
   const speechSupported = typeof window !== 'undefined'
     && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
   const isStandalone = typeof window !== 'undefined' && (
@@ -165,6 +175,9 @@ export function AssistantPage() {
     if (!question.trim() && !attachedImage) return;
     setSubmittedQuestion(question.trim() || t.snap);
     setReply(null);
+    setCommunityConfirmation('');
+    setFeedbackRating(null);
+    setFeedbackComment('');
     chat.mutate({
       data: {
         message: question.trim() || t.placeholder,
@@ -177,6 +190,46 @@ export function AssistantPage() {
         setReply(data);
         setSessionId(data.sessionId);
       }
+    });
+  };
+
+  const sendToCommunity = () => {
+    if (!reply || communityQuestion.isPending) return;
+    communityQuestion.mutate({
+      data: {
+        question: submittedQuestion,
+        screenshotRef: attachedImage?.name || null,
+        language: navigator.language?.slice(0, 20) || 'en',
+      },
+    }, {
+      onSuccess: (result) => setCommunityConfirmation(result.confirmation),
+    });
+  };
+
+  const submitFeedback = () => {
+    if (!reply || !feedbackRating || answerFeedback.isPending) return;
+    answerFeedback.mutate({
+      data: {
+        responseId: reply.responseId,
+        sessionId: reply.sessionId,
+        rating: feedbackRating,
+        comment: feedbackRating === 'negative' ? feedbackComment.trim() || null : null,
+      },
+    }, {
+      onSuccess: () => setFeedbackRating('positive'),
+    });
+  };
+
+  const rateHelpful = () => {
+    if (!reply || answerFeedback.isPending || answerFeedback.isSuccess) return;
+    setFeedbackRating('positive');
+    answerFeedback.mutate({
+      data: {
+        responseId: reply.responseId,
+        sessionId: reply.sessionId,
+        rating: 'positive',
+        comment: null,
+      },
     });
   };
 
@@ -265,12 +318,20 @@ export function AssistantPage() {
           </div>
 
           {reply.communityHandoff && (
-            <button
-              type="button"
-              className="mb-6 w-full rounded-2xl border border-primary/40 bg-primary/10 px-5 py-4 text-left text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-primary/20 active:scale-[0.99]"
-            >
-              Send to community — get answer from a Teamcenter expert
-            </button>
+            communityConfirmation ? (
+              <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm font-semibold text-primary">
+                {communityConfirmation}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={sendToCommunity}
+                disabled={communityQuestion.isPending}
+                className="mb-6 w-full rounded-2xl border border-primary/40 bg-primary/10 px-5 py-4 text-left text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-primary/20 active:scale-[0.99] disabled:opacity-50"
+              >
+                {communityQuestion.isPending ? 'Sending…' : t.community}
+              </button>
+            )
           )}
           
           {reply.sources && reply.sources.length > 0 && (
@@ -313,6 +374,48 @@ export function AssistantPage() {
               </div>
             </div>
           )}
+
+          <div className="mb-6 rounded-2xl border border-border bg-background p-4">
+            <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.feedbackPrompt}</div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                aria-label="Helpful"
+                onClick={rateHelpful}
+                className={`rounded-xl border px-4 py-2 text-sm transition-colors ${feedbackRating === 'positive' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-muted'}`}
+              >
+                <ThumbsUp className="mr-2 inline h-4 w-4" /> Yes
+              </button>
+              <button
+                type="button"
+                aria-label="Not helpful"
+                onClick={() => setFeedbackRating('negative')}
+                className={`rounded-xl border px-4 py-2 text-sm transition-colors ${feedbackRating === 'negative' ? 'border-destructive bg-destructive/10 text-destructive' : 'border-border hover:bg-muted'}`}
+              >
+                <ThumbsDown className="mr-2 inline h-4 w-4" /> No
+              </button>
+            </div>
+            {feedbackRating === 'negative' && (
+              <div className="mt-3 space-y-2">
+                <textarea
+                  value={feedbackComment}
+                  maxLength={200}
+                  onChange={(event) => setFeedbackComment(event.target.value)}
+                  placeholder={t.feedbackComment}
+                  className="min-h-20 w-full resize-none rounded-xl border border-border bg-card p-3 text-sm outline-none focus:border-primary"
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{feedbackComment.length}/200</span>
+                  <button type="button" onClick={submitFeedback} disabled={answerFeedback.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+                    {answerFeedback.isPending ? 'Sending…' : t.feedbackSend}
+                  </button>
+                </div>
+              </div>
+            )}
+            {feedbackRating === 'positive' && answerFeedback.isSuccess && (
+              <div className="mt-3 text-sm text-primary">{t.feedbackThanks}</div>
+            )}
+          </div>
         </main>
         
         <footer className="p-4 border-t border-border bg-background grid grid-cols-2 gap-3">

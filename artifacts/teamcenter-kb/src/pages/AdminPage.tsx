@@ -2,12 +2,13 @@ import { useState, useRef, FormEvent, ChangeEvent, useEffect } from 'react';
 import { 
   useGetStats, useListArticles, useStartScrape, useGetScrapeStatus, 
   useCreateArticle, useImportPdfArticle, useBulkImportArticles, useSeedScrapeUrls, 
-  useGetArticleCount, getGetStatsQueryKey, getGetArticleCountQueryKey, getGetScrapeStatusQueryKey
+  useGetArticleCount, useListCommunityQuestions, useAnswerCommunityQuestion, useGetFeedbackStats,
+  getGetStatsQueryKey, getGetArticleCountQueryKey, getGetScrapeStatusQueryKey
 } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 import { 
   Activity, Database, Upload, RefreshCw, ChevronLeft, 
-  Plus, Search as SearchIcon, AlertCircle, Wrench
+  Plus, Search as SearchIcon, AlertCircle, Wrench, MessageCircle, ThumbsDown
 } from 'lucide-react';
 
 export function AdminPage() {
@@ -108,9 +109,55 @@ export function AdminPage() {
         </div>
 
         <CorpusIngestion onRefresh={() => { stats.refetch(); countQuery.refetch(); }} />
+        <CommunityPanel />
         <ArticleList />
       </main>
     </div>
+  );
+}
+
+function CommunityPanel() {
+  const [status, setStatus] = useState<'pending' | 'answered' | 'all'>('pending');
+  const [answerDrafts, setAnswerDrafts] = useState<Record<number, string>>({});
+  const questions = useListCommunityQuestions({ status }, { query: { queryKey: ['community-questions', status] } });
+  const feedback = useGetFeedbackStats({ query: { queryKey: ['feedback-stats'], refetchInterval: 30000 } });
+  const answerQuestion = useAnswerCommunityQuestion();
+
+  return (
+    <section className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-border bg-card p-5"><div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total responses</div><div className="mt-2 text-3xl font-light">{feedback.data?.totalResponses ?? '—'}</div></div>
+        <div className="rounded-2xl border border-border bg-card p-5"><div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Positive answers</div><div className="mt-2 text-3xl font-light">{feedback.data ? `${feedback.data.positivePercentage}%` : '—'}</div></div>
+        <div className="rounded-2xl border border-border bg-card p-5"><div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Negative comments</div><div className="mt-2 text-3xl font-light">{feedback.data?.recentNegative.length ?? '—'}</div></div>
+      </div>
+      {feedback.data?.recentNegative.length ? (
+        <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-5">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-destructive"><ThumbsDown className="h-4 w-4" /> Recent negative feedback</div>
+          <div className="space-y-2">{feedback.data.recentNegative.map((item) => <div key={item.id} className="rounded-xl bg-background/70 p-3 text-sm"><div>{item.comment || 'No comment provided.'}</div><div className="mt-1 text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</div></div>)}</div>
+        </div>
+      ) : null}
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div><h2 className="flex items-center gap-2 text-lg font-medium"><MessageCircle className="h-5 w-5 text-primary" /> Community questions</h2><p className="mt-1 text-sm text-muted-foreground">Answer pending questions and add expert guidance to the corpus.</p></div>
+          <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)} className="rounded-xl border border-border bg-background px-3 py-2 text-sm"><option value="pending">Pending</option><option value="answered">Answered</option><option value="all">All</option></select>
+        </div>
+        {questions.isLoading ? <div className="py-5 text-center text-sm text-muted-foreground">Loading questions…</div> : questions.data?.length ? (
+          <div className="space-y-4">{questions.data.map((item) => (
+            <div key={item.id} className="rounded-xl border border-border/70 bg-background p-4">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span className={`rounded-full px-2 py-1 ${item.status === 'pending' ? 'bg-primary/10 text-primary' : 'bg-muted'}`}>{item.status}</span><span>{item.language}</span><span>{new Date(item.createdAt).toLocaleString()}</span></div>
+              <div className="mt-3 text-sm font-medium leading-6">{item.question}</div>
+              {item.screenshotRef && <div className="mt-2 text-xs text-muted-foreground">Screenshot reference: {item.screenshotRef}</div>}
+              {item.status === 'answered' ? <div className="mt-3 rounded-xl bg-primary/5 p-3 text-sm leading-6">{item.answer}</div> : (
+                <div className="mt-4 space-y-2">
+                  <textarea value={answerDrafts[item.id] ?? ''} onChange={(event) => setAnswerDrafts((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Write a practical Teamcenter answer…" className="min-h-24 w-full resize-y rounded-xl border border-border bg-card p-3 text-sm outline-none focus:border-primary" />
+                  <button type="button" disabled={!answerDrafts[item.id]?.trim() || answerQuestion.isPending} onClick={() => answerQuestion.mutate({ id: item.id, data: { answer: answerDrafts[item.id].trim() } }, { onSuccess: () => { setAnswerDrafts((current) => { const next = { ...current }; delete next[item.id]; return next; }); questions.refetch(); feedback.refetch(); } })} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{answerQuestion.isPending ? 'Saving…' : 'Answer and add to corpus'}</button>
+                </div>
+              )}
+            </div>
+          ))}</div>
+        ) : <div className="py-5 text-center text-sm text-muted-foreground">No {status === 'all' ? '' : status} questions.</div>}
+      </div>
+    </section>
   );
 }
 
