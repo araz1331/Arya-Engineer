@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useChat } from '@workspace/api-client-react';
-import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, AlertCircle, ShieldCheck, Mic, MicOff } from 'lucide-react';
+import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, AlertCircle, ShieldCheck, Mic, MicOff, Download } from 'lucide-react';
 import { ImageAnnotator } from '../components/ImageAnnotator';
+import { InstallGuideModal, type InstallPlatform } from '../components/InstallGuideModal';
 
 const UI_COPY = {
   headline: 'Stuck in Teamcenter?',
@@ -33,6 +34,11 @@ type SpeechRecognitionLike = {
   stop: () => void;
 };
 
+type BeforeInstallPromptLike = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+};
+
 export function AssistantPage() {
   const t = UI_COPY;
   
@@ -44,12 +50,54 @@ export function AssistantPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isDraggingImage, setIsDraggingImage] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isInstallGuideOpen, setIsInstallGuideOpen] = useState(false);
+  const [installPlatform, setInstallPlatform] = useState<InstallPlatform>('desktop');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const deferredInstallPromptRef = useRef<BeforeInstallPromptLike | null>(null);
   const chat = useChat();
   const speechSupported = typeof window !== 'undefined'
     && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+  const isStandalone = typeof window !== 'undefined' && (
+    window.matchMedia('(display-mode: standalone)').matches
+    || Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
+  );
+
+  useEffect(() => {
+    const userAgent = navigator.userAgent;
+    if (/iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+      setInstallPlatform('ios');
+    } else if (/Android/i.test(userAgent)) {
+      setInstallPlatform('android');
+    }
+
+    const wasCompleted = localStorage.getItem('arya_pwa_onboarding_complete') === 'true';
+    const wasSeenThisSession = sessionStorage.getItem('arya_pwa_onboarding_seen') === 'true';
+    if (!isStandalone && !wasCompleted && !wasSeenThisSession) {
+      sessionStorage.setItem('arya_pwa_onboarding_seen', 'true');
+      setIsInstallGuideOpen(true);
+    }
+
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      deferredInstallPromptRef.current = event as BeforeInstallPromptLike;
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, [isStandalone]);
+
+  const dismissInstallGuide = () => setIsInstallGuideOpen(false);
+  const completeInstallGuide = async () => {
+    localStorage.setItem('arya_pwa_onboarding_complete', 'true');
+    setIsInstallGuideOpen(false);
+    const prompt = deferredInstallPromptRef.current;
+    if (prompt) {
+      await prompt.prompt();
+      await prompt.userChoice;
+      deferredInstallPromptRef.current = null;
+    }
+  };
 
   const handleImageFile = (file: File | undefined) => {
     if (file?.type.startsWith('image/')) setRawFile(file);
@@ -272,6 +320,15 @@ export function AssistantPage() {
           <Wrench className="w-6 h-6" />
           <span className="font-semibold text-lg tracking-wide text-foreground">Arya Engineer</span>
         </div>
+        {!isStandalone && (
+          <button
+            onClick={() => setIsInstallGuideOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Install app
+          </button>
+        )}
       </header>
 
       <main className="flex-1 p-4 pb-8 max-w-2xl mx-auto w-full">
@@ -370,6 +427,13 @@ export function AssistantPage() {
         </div>
         <div className="mt-7 flex items-center justify-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" /> Your photo stays protected</div>
       </main>
+      {isInstallGuideOpen && (
+        <InstallGuideModal
+          platform={installPlatform}
+          onGotIt={completeInstallGuide}
+          onRemindLater={dismissInstallGuide}
+        />
+      )}
     </div>
   );
 }
