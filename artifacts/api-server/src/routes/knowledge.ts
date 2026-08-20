@@ -237,13 +237,16 @@ router.post("/chat", async (req, res): Promise<void> => {
   const matches = await searchArticles(retrievalQuery);
   const sessionId = parsed.data.sessionId ?? crypto.randomUUID();
   const context = matches.map(({ article }) => `Article title: ${article.title}\n${article.content}`).join("\n\n");
+  const sourceGuidance = matches.length > 0
+    ? `Sources were found (${matches.length} article${matches.length === 1 ? "" : "s"}). You MUST use them to construct a helpful best-effort answer. Treat the closest relevant articles as useful even when their titles or wording are not an exact match: for example, an article titled "Configuring Teamcenter Project" is relevant to a question about configuring a workflow. Synthesize practical steps from the provided content and clearly distinguish direct guidance from a reasonable inference. Never say "I don't have information", "not found", or that the corpus has no answer when one or more articles are provided.`
+    : "No sources were found. Only in this case, honestly say that the indexed knowledge base does not contain a relevant reference and ask the user for a little more context.";
   const prompt = `You are an expert Teamcenter consultant.
 Answer questions in the same language the user writes in:
 - If user writes in Azerbaijani → answer in Azerbaijani
 - If user writes in Russian → answer in Russian
 - If user writes in English → answer in English
 Base answers on the indexed knowledge base articles.
-If answer not found in corpus — say so honestly.
+${sourceGuidance}
 Help with Teamcenter installation, configuration, troubleshooting, integrations and daily usage. Do not use numbered source markers such as [Source 1]. If you mention a source, use its exact article title instead.${parsed.data.imageData ? " The user uploaded a screenshot; incorporate the image analysis into your answer and clearly describe what the screenshot shows before proposing a solution." : ""}\n\nImage analysis:\n${imageAnalysis || "No image uploaded."}\n\nKnowledge base:\n${context}\n\nUser question:\n${parsed.data.message}`;
   let answer = "";
   try {
