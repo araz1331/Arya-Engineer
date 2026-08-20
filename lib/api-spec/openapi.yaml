@@ -121,6 +121,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ArticleCount"
+  /admin/articles/sample:
+    get:
+      operationId: getAdminArticleSample
+      tags: [knowledge]
+      summary: Get a random sample of indexed articles for admin review
+      parameters:
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Random article sample
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminArticleSample"
+        "400":
+          description: Invalid sample size
   /articles/pdf:
     post:
       operationId: importPdfArticle
@@ -345,6 +370,15 @@ components:
       required: [count]
       properties:
         count: { type: number }
+    AdminArticleSample:
+      type: object
+      required: [id, title, content, url]
+      properties:
+        id: { type: number }
+        title: { type: string }
+        content: { type: string, maxLength: 300 }
+        url:
+          type: [string, "null"]
     KnowledgeStats:
       type: object
       required: [totalArticles, indexedArticles, lastScraped, categories]

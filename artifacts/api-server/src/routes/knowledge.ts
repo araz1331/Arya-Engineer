@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { timingSafeEqual } from "node:crypto";
-import { count, desc } from "drizzle-orm";
+import { count, desc, sql } from "drizzle-orm";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { ai } from "@workspace/integrations-gemini-ai";
 import { db, articlesTable, scraperProgressTable } from "@workspace/db";
@@ -112,6 +112,34 @@ router.post("/articles", async (req, res): Promise<void> => {
 router.get("/articles/count", async (_req, res): Promise<void> => {
   const [articleCount] = await db.select({ total: count() }).from(articlesTable);
   res.json(GetArticleCountResponse.parse({ count: Number(articleCount?.total ?? 0) }));
+});
+
+router.get("/admin/articles/sample", async (req, res): Promise<void> => {
+  const rawCount = req.query.count;
+  const countValue = rawCount === undefined ? 20 : Number(rawCount);
+  if (!Number.isInteger(countValue) || countValue < 1 || countValue > 100) {
+    res.status(400).json({ error: "count must be an integer between 1 and 100." });
+    return;
+  }
+
+  await ensureStarterArticles();
+  const articles = await db
+    .select({
+      id: articlesTable.id,
+      title: articlesTable.title,
+      content: articlesTable.content,
+      url: articlesTable.url,
+    })
+    .from(articlesTable)
+    .orderBy(sql`random()`)
+    .limit(countValue);
+
+  res.json(articles.map((article) => ({
+    id: article.id,
+    title: article.title,
+    content: article.content.slice(0, 300),
+    url: article.url,
+  })));
 });
 
 router.post("/articles/pdf", async (req, res): Promise<void> => {
