@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc, ilike, or } from "drizzle-orm";
 import { db, articlesTable } from "@workspace/db";
 
 const starterArticles = [
@@ -36,11 +36,65 @@ export async function ensureStarterArticles(): Promise<void> {
   }
 }
 
+const ERROR_CODE_PATTERNS = [
+  /MAA\w+/gi,
+  /TCTYPE_\w+/gi,
+  /KB\d+/gi,
+  /PL\d+/gi,
+  /AWC-\w+/gi,
+  /ITK_\w+/gi,
+  /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/g,
+];
+
+const QUOTED_PHRASE_PATTERN = /"([^"\r\n]{3,})"|'([^'\r\n]{3,})'|“([^”\r\n]{3,})”/g;
+
+export function extractExactSearchTerms(message: string): string[] {
+  const terms = new Set<string>();
+  for (const pattern of ERROR_CODE_PATTERNS) {
+    pattern.lastIndex = 0;
+    for (const match of message.matchAll(pattern)) terms.add(match[0]);
+  }
+  for (const match of message.matchAll(QUOTED_PHRASE_PATTERN)) {
+    const phrase = match[1] ?? match[2] ?? match[3];
+    if (phrase?.trim()) terms.add(phrase.trim());
+  }
+  return [...terms];
+}
+
+function exactTermScore(article: typeof articlesTable.$inferSelect, terms: string[]): number {
+  const title = article.title.toLocaleLowerCase();
+  const content = article.content.toLocaleLowerCase();
+  let score = 0;
+  for (const term of terms) {
+    const normalizedTerm = term.toLocaleLowerCase();
+    if (title.includes(normalizedTerm)) score = Math.max(score, 0.99);
+    else if (content.includes(normalizedTerm)) score = Math.max(score, 0.95);
+  }
+  return score;
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
 export async function searchArticles(message: string, limit = 5) {
   await ensureStarterArticles();
   const rows = await db.select().from(articlesTable).orderBy(desc(articlesTable.scrapedAt)).limit(250);
+  const exactTerms = extractExactSearchTerms(message);
+  const exactRows = exactTerms.length
+    ? await db.select().from(articlesTable).where(or(...exactTerms.flatMap((term) => {
+      const pattern = `%${escapeLikePattern(term)}%`;
+      return [ilike(articlesTable.title, pattern), ilike(articlesTable.content, pattern)];
+    })))
+    : [];
+  const exactMatches = exactTerms.length
+    ? exactRows
+      .map((article) => ({ article, score: exactTermScore(article, exactTerms) }))
+      .filter((match) => match.score > 0.8)
+      .sort((a, b) => b.score - a.score)
+    : [];
   const terms = message.toLowerCase().split(/[^a-zа-яё0-9]+/i).filter((term) => term.length > 2);
-  return rows
+  const semanticMatches = rows
     .map((article) => {
       const haystack = `${article.title} ${article.content} ${article.category ?? ""} ${(article.tags ?? []).join(" ")}`.toLowerCase();
       const hits = terms.reduce((count, term) => count + (haystack.includes(term) ? 1 : 0), 0);
@@ -48,6 +102,12 @@ export async function searchArticles(message: string, limit = 5) {
     })
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
+
+  const exactIds = new Set(exactMatches.map(({ article }) => article.id));
+  return [
+    ...exactMatches,
+    ...semanticMatches.filter(({ article }) => !exactIds.has(article.id)),
+  ].slice(0, limit);
 }
 
 export async function getArticleList(search: string | undefined, limit: number) {

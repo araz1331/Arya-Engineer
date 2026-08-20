@@ -274,7 +274,9 @@ router.post("/chat", async (req, res): Promise<void> => {
     }
   }
   const englishSearchQuery = await translateQueryForSearch(parsed.data.message);
-  const retrievalQuery = [englishSearchQuery, imageAnalysis].filter(Boolean).join("\n");
+  // Keep the original wording in the retrieval input so rare identifiers and
+  // quoted phrases survive translation before exact-term extraction.
+  const retrievalQuery = [parsed.data.message, englishSearchQuery, imageAnalysis].filter(Boolean).join("\n");
   const retrievedMatches = await searchArticles(retrievalQuery);
   const bestMatchScore = retrievedMatches[0]?.score ?? 0;
   const communityHandoff = bestMatchScore < 0.7;
