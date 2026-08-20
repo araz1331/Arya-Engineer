@@ -27,12 +27,33 @@ if (!basePath) {
   );
 }
 
+const ga4MeasurementId = process.env.GA4_MEASUREMENT_ID?.trim() ?? '';
+
 export default defineConfig({
   base: basePath,
+  define: {
+    'import.meta.env.VITE_GA4_MEASUREMENT_ID': JSON.stringify(ga4MeasurementId),
+  },
   plugins: [
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    {
+      name: 'ga4-head-script',
+      transformIndexHtml(html) {
+        if (!ga4MeasurementId) return html;
+        const script = `
+    <script async src="https://www.googletagmanager.com/gtag/js?id=${ga4MeasurementId}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
+      gtag('js', new Date());
+      gtag('config', '${ga4MeasurementId}', { send_page_view: true });
+    </script>`;
+        return html.replace('</head>', `${script}\n  </head>`);
+      },
+    },
     ...(process.env.NODE_ENV !== 'production' &&
     process.env.REPL_ID !== undefined
       ? [

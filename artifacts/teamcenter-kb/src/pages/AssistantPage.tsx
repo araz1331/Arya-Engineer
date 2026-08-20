@@ -3,6 +3,7 @@ import { useChat, useSubmitAnswerFeedback, useSubmitCommunityQuestion } from '@w
 import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, AlertCircle, ShieldCheck, Mic, MicOff, Download, Video, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { ImageAnnotator } from '../components/ImageAnnotator';
 import { InstallGuideModal, type InstallPlatform } from '../components/InstallGuideModal';
+import { trackEvent } from '../lib/analytics';
 
 const UI_COPY = {
   headline: 'Stuck in Teamcenter?',
@@ -110,7 +111,10 @@ export function AssistantPage() {
   };
 
   const handleImageFile = (file: File | undefined) => {
-    if (file?.type.startsWith('image/')) setRawFile(file);
+    if (file?.type.startsWith('image/')) {
+      trackEvent('photo_uploaded', { file_type: file.type });
+      setRawFile(file);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,6 +177,7 @@ export function AssistantPage() {
 
   const submitQuestion = () => {
     if (!question.trim() && !attachedImage) return;
+    trackEvent('question_asked', { has_photo: Boolean(attachedImage) });
     setSubmittedQuestion(question.trim() || t.snap);
     setReply(null);
     setCommunityConfirmation('');
@@ -187,6 +192,7 @@ export function AssistantPage() {
       }
     }, {
       onSuccess: (data) => {
+        trackEvent('answer_received', { has_sources: data.sources.length > 0 });
         setReply(data);
         setSessionId(data.sessionId);
       }
@@ -202,7 +208,10 @@ export function AssistantPage() {
         language: navigator.language?.slice(0, 20) || 'en',
       },
     }, {
-      onSuccess: (result) => setCommunityConfirmation(result.confirmation),
+      onSuccess: (result) => {
+        trackEvent('community_question_submitted', { has_screenshot: Boolean(attachedImage) });
+        setCommunityConfirmation(result.confirmation);
+      },
     });
   };
 
@@ -216,13 +225,17 @@ export function AssistantPage() {
         comment: feedbackRating === 'negative' ? feedbackComment.trim() || null : null,
       },
     }, {
-      onSuccess: () => setFeedbackRating('positive'),
+      onSuccess: () => {
+        trackEvent('feedback_negative', { has_comment: Boolean(feedbackComment.trim()) });
+        setFeedbackRating('positive');
+      },
     });
   };
 
   const rateHelpful = () => {
     if (!reply || answerFeedback.isPending || answerFeedback.isSuccess) return;
     setFeedbackRating('positive');
+    trackEvent('feedback_positive');
     answerFeedback.mutate({
       data: {
         responseId: reply.responseId,
