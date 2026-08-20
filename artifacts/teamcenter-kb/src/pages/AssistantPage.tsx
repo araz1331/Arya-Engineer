@@ -1,67 +1,40 @@
 import { useState, useRef } from 'react';
 import { useChat } from '@workspace/api-client-react';
-import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, AlertCircle, ShieldCheck, Mic, MicOff } from 'lucide-react';
 import { ImageAnnotator } from '../components/ImageAnnotator';
 
-const TRANSLATIONS = {
-  en: {
-    headline: 'Stuck in Teamcenter?',
-    subtitle: 'Photo or text — get an answer in seconds',
-    placeholder: 'Or describe your problem...',
-    questionPlaceholder: "What's your question about this?",
-    taps: ['I see an error', 'How to do?', "Can't login"],
-    cameraZone: 'Take a photo or upload an image',
-    dropHint: 'Click, tap, or drop an image here',
-    share: 'Share',
-    sources: 'Sources',
-    askAnother: 'Ask follow-up',
-    snap: 'Take a photo',
-    send: 'Send',
-    drop: 'Drop image here',
-    analyzing: 'Finding an answer…',
-    analyzingCopy: 'Looking at your Teamcenter issue now.'
-  },
-  az: {
-    headline: 'Teamcenter-də ilişib qalmısınız?',
-    subtitle: 'Şəkil və ya mətn — saniyələr içində cavab alın',
-    placeholder: 'Və ya probleminizi təsvir edin...',
-    questionPlaceholder: 'Bu şəkil barədə sualınız nədir?',
-    taps: ['Xəta mesajı var', 'Necə etmək olar?', 'Sistemə girə bilmirəm'],
-    cameraZone: 'Şəkil çəkin və ya şəkil yükləyin',
-    dropHint: 'Klikləyin, toxunun və ya şəkli bura atın',
-    share: 'Paylaş',
-    sources: 'İstinadlar',
-    askAnother: 'Əlavə sual verin',
-    snap: 'Şəkil çəkin',
-    send: 'Göndər',
-    drop: 'Şəkli bura atın',
-    analyzing: 'Cavab axtarılır…',
-    analyzingCopy: 'Teamcenter probleminizi araşdırırıq.'
-  },
-  ru: {
-    headline: 'Застряли в Teamcenter?',
-    subtitle: 'Фото или текст — получите ответ за секунды',
-    placeholder: 'Или опишите проблему...',
-    questionPlaceholder: 'Какой у вас вопрос по этому фото?',
-    taps: ['Вижу ошибку', 'Как сделать?', 'Не могу войти'],
-    cameraZone: 'Сделайте фото или загрузите изображение',
-    dropHint: 'Нажмите, коснитесь или перетащите изображение сюда',
-    share: 'Поделиться',
-    sources: 'Источники',
-    askAnother: 'Задать ещё вопрос',
-    snap: 'Сделать фото',
-    send: 'Отправить',
-    drop: 'Перетащите изображение сюда',
-    analyzing: 'Ищем ответ…',
-    analyzingCopy: 'Разбираемся с вашей проблемой в Teamcenter.'
-  }
+const UI_COPY = {
+  headline: 'Stuck in Teamcenter?',
+  subtitle: 'Photo or text — get an answer in seconds',
+  placeholder: 'Describe your problem or upload a screenshot...',
+  taps: ['I see an error', 'How to do this?', "Can't login"],
+  cameraZone: 'Take or upload a screenshot',
+  dropHint: 'Click to choose, or drag and drop an image here',
+  share: 'Share',
+  sources: 'Sources',
+  askAnother: 'Ask follow-up',
+  snap: 'Screenshot uploaded',
+  send: 'Send',
+  drop: 'Drop image here',
+  analyzing: 'Finding an answer…',
+  analyzingCopy: 'Looking at your Teamcenter issue now.',
+  listening: 'Listening…',
+  voiceLabel: 'Speak your question',
 };
 
-type Language = 'en' | 'az' | 'ru';
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
 
 export function AssistantPage() {
-  const [lang, setLang] = useState<Language>('az');
-  const t = TRANSLATIONS[lang];
+  const t = UI_COPY;
   
   const [question, setQuestion] = useState('');
   const [rawFile, setRawFile] = useState<File | null>(null);
@@ -70,9 +43,13 @@ export function AssistantPage() {
   const [submittedQuestion, setSubmittedQuestion] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const chat = useChat();
+  const speechSupported = typeof window !== 'undefined'
+    && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
   const handleImageFile = (file: File | undefined) => {
     if (file?.type.startsWith('image/')) setRawFile(file);
@@ -97,13 +74,52 @@ export function AssistantPage() {
     handleImageFile(e.dataTransfer.files?.[0]);
   };
 
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      speechRecognitionRef.current?.stop();
+      return;
+    }
+    const SpeechRecognition = (window as Window & {
+      SpeechRecognition?: new () => SpeechRecognitionLike;
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    }).SpeechRecognition || (window as Window & {
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    }).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = navigator.language || 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript ?? '')
+        .join(' ')
+        .trim();
+      if (transcript) {
+        setQuestion((current) => `${current} ${transcript}`.trim());
+      }
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      speechRecognitionRef.current = null;
+    };
+    recognition.onerror = () => {
+      setIsListening(false);
+      speechRecognitionRef.current = null;
+    };
+    speechRecognitionRef.current = recognition;
+    setIsListening(true);
+    recognition.start();
+  };
+
   const submitQuestion = () => {
     if (!question.trim() && !attachedImage) return;
     setSubmittedQuestion(question.trim() || t.snap);
     setReply(null);
     chat.mutate({
       data: {
-        message: question.trim() || t.questionPlaceholder,
+        message: question.trim() || t.placeholder,
         sessionId,
         imageData: attachedImage?.data || null,
         imageMimeType: attachedImage?.mimeType || null
@@ -256,17 +272,6 @@ export function AssistantPage() {
           <Wrench className="w-6 h-6" />
           <span className="font-semibold text-lg tracking-wide text-foreground">Arya Engineer</span>
         </div>
-        <div className="flex bg-muted rounded-lg p-1">
-          {(['az', 'ru', 'en'] as Language[]).map(l => (
-            <button
-              key={l}
-              onClick={() => setLang(l)}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-colors ${lang === l ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
-            >
-              {l}
-            </button>
-          ))}
-        </div>
       </header>
 
       <main className="flex-1 p-4 pb-8 max-w-2xl mx-auto w-full">
@@ -323,12 +328,25 @@ export function AssistantPage() {
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder={attachedImage ? t.questionPlaceholder : t.placeholder}
+            placeholder={t.placeholder}
             className="w-full bg-transparent resize-none outline-none text-base min-h-[76px] p-2 placeholder:text-muted-foreground"
             rows={2}
           />
           
-          <div className="flex items-center justify-end pt-2 border-t border-border/50">
+          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+            {speechSupported ? (
+              <button
+                type="button"
+                onClick={toggleVoiceInput}
+                aria-label={t.voiceLabel}
+                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                  isListening ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                {isListening ? t.listening : t.voiceLabel}
+              </button>
+            ) : <span />}
             <button 
               onClick={submitQuestion}
               disabled={!question.trim() && !attachedImage}
@@ -338,6 +356,7 @@ export function AssistantPage() {
             </button>
           </div>
         </div>
+        <p className="mt-2 text-center text-xs text-muted-foreground">Ask in any language — I&apos;ll respond in kind</p>
         <div className="mt-5 flex flex-wrap gap-2">
           {t.taps.map(tap => (
             <button
