@@ -3,6 +3,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { db, articleUrlsTable, articlesTable, scraperProgressTable } from "@workspace/db";
 import { logger } from "./logger";
 import puppeteer, { type Browser, type Page } from "puppeteer";
+import { cleanContent } from "./content";
 
 const BASE_URL = "https://support.sw.siemens.com/en-US/product/272221135/knowledge-base";
 const ARTICLE_URL = (id: string) => `${BASE_URL}/${id}`;
@@ -250,7 +251,7 @@ function parseArticleMarkup(markup: string) {
   if (hasVideo && mainContent.length < 120) return null;
   if (!title || content.length < 40) throw new Error("Rendered GTAC article did not contain usable title/content");
   const category = categoryFromMarkup(article$, "main, article, nav");
-  return { title, content: content.slice(0, 100000), tags: extractTags(article$), sourceUpdatedAt: parseSourceDate(article$), ...category };
+  return { title, content: cleanContent(content).slice(0, 100000), tags: extractTags(article$), sourceUpdatedAt: parseSourceDate(article$), ...category };
 }
 
 async function scrapeRenderedArticle(page: Page, url: string) {

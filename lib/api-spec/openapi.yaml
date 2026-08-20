@@ -146,6 +146,18 @@ paths:
                   $ref: "#/components/schemas/AdminArticleSample"
         "400":
           description: Invalid sample size
+  /admin/articles/clean-all:
+    post:
+      operationId: cleanAllAdminArticles
+      tags: [knowledge]
+      summary: Remove navigation artifacts from all indexed articles
+      responses:
+        "200":
+          description: Cleanup result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArticleCleanupResponse"
   /articles/pdf:
     post:
       operationId: importPdfArticle
@@ -379,6 +391,12 @@ components:
         content: { type: string, maxLength: 300 }
         url:
           type: [string, "null"]
+    ArticleCleanupResponse:
+      type: object
+      required: [scanned, cleaned]
+      properties:
+        scanned: { type: number }
+        cleaned: { type: number }
     KnowledgeStats:
       type: object
       required: [totalArticles, indexedArticles, lastScraped, categories]

@@ -1,12 +1,13 @@
 import { Router, type IRouter } from "express";
 import { timingSafeEqual } from "node:crypto";
-import { count, desc, sql } from "drizzle-orm";
+import { count, desc, eq, sql } from "drizzle-orm";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { ai } from "@workspace/integrations-gemini-ai";
 import { db, articlesTable, scraperProgressTable } from "@workspace/db";
 import { BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, DebugScrapeResponse, GetArticleCountResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, LoginBody, LoginResponse, SeedScrapeUrlsBody, SeedScrapeUrlsResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
 import { getArticleList, searchArticles, ensureStarterArticles, toArticleResponse, extractRelatedVideos } from "../lib/knowledge";
 import { debugScrape, getScraperStatus, runScraper, seedArticleUrls, subscribeScraperProgress } from "../lib/scraper";
+import { cleanContent } from "../lib/content";
 
 const router: IRouter = Router();
 
@@ -97,7 +98,7 @@ router.post("/articles", async (req, res): Promise<void> => {
   }
   const [article] = await db.insert(articlesTable).values({
     title: parsed.data.title.trim(),
-    content: parsed.data.content.trim(),
+    content: cleanContent(parsed.data.content),
     category: parsed.data.category?.trim() || null,
     tags: parsed.data.tags.map((tag) => tag.trim()).filter(Boolean),
     url: parsed.data.url?.trim() || null,
@@ -112,6 +113,18 @@ router.post("/articles", async (req, res): Promise<void> => {
 router.get("/articles/count", async (_req, res): Promise<void> => {
   const [articleCount] = await db.select({ total: count() }).from(articlesTable);
   res.json(GetArticleCountResponse.parse({ count: Number(articleCount?.total ?? 0) }));
+});
+
+router.post("/admin/articles/clean-all", async (_req, res): Promise<void> => {
+  const articles = await db.select({ id: articlesTable.id, content: articlesTable.content }).from(articlesTable);
+  let cleaned = 0;
+  for (const article of articles) {
+    const content = cleanContent(article.content);
+    if (content === article.content) continue;
+    await db.update(articlesTable).set({ content }).where(eq(articlesTable.id, article.id));
+    cleaned += 1;
+  }
+  res.json({ scanned: articles.length, cleaned });
 });
 
 router.get("/admin/articles/sample", async (req, res): Promise<void> => {
@@ -175,7 +188,7 @@ router.post("/articles/pdf", async (req, res): Promise<void> => {
   }
   const [article] = await db.insert(articlesTable).values({
     title: parsed.data.title?.trim() || parsed.data.filename.replace(/\.pdf$/i, ""),
-    content: content.slice(0, 1000000),
+    content: cleanContent(content).slice(0, 1000000),
     category: parsed.data.category?.trim() || "Imported PDF",
     tags: parsed.data.tags?.map((tag) => tag.trim()).filter(Boolean) ?? [],
     url: parsed.data.url?.trim() || null,
@@ -214,7 +227,7 @@ router.post("/articles/bulk", async (req, res): Promise<void> => {
     for (const item of articles) {
       const [article] = await tx.insert(articlesTable).values({
         title: item.title.trim(),
-        content: item.content.trim(),
+        content: cleanContent(item.content),
         category: item.category?.trim() || null,
         tags: item.tags.map((tag) => tag.trim()).filter(Boolean),
         url: item.url?.trim() || null,
