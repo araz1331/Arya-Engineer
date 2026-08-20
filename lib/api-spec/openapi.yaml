@@ -220,6 +220,101 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatReply"
+  /community/questions:
+    post:
+      operationId: submitCommunityQuestion
+      tags: [knowledge]
+      summary: Submit a question for Teamcenter expert follow-up
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommunityQuestionInput"
+      responses:
+        "201":
+          description: Community question submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityQuestionResponse"
+  /feedback:
+    post:
+      operationId: submitAnswerFeedback
+      tags: [knowledge]
+      summary: Rate an assistant answer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackInput"
+      responses:
+        "201":
+          description: Feedback recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedbackResponse"
+  /admin/community/questions:
+    get:
+      operationId: listCommunityQuestions
+      tags: [knowledge]
+      summary: List community questions for admin review
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, answered, all]
+            default: pending
+      responses:
+        "200":
+          description: Community question queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommunityQuestion"
+  /admin/community/questions/{id}/answer:
+    post:
+      operationId: answerCommunityQuestion
+      tags: [knowledge]
+      summary: Answer a community question and add it to the corpus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommunityAnswerInput"
+      responses:
+        "200":
+          description: Answered community question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityQuestion"
+        "404":
+          description: Question not found
+  /admin/feedback/stats:
+    get:
+      operationId: getFeedbackStats
+      tags: [knowledge]
+      summary: Get answer feedback statistics
+      responses:
+        "200":
+          description: Feedback statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedbackStats"
   /scrape/start:
     post:
       operationId: startScrape
@@ -443,7 +538,7 @@ components:
         url: { type: string }
     ChatReply:
       type: object
-      required: [answer, sources, videos, sessionId, communityHandoff]
+      required: [answer, sources, videos, sessionId, communityHandoff, responseId]
       properties:
         answer: { type: string }
         sources:
@@ -457,6 +552,68 @@ components:
             $ref: "#/components/schemas/ChatVideo"
         sessionId: { type: string }
         communityHandoff: { type: boolean }
+        responseId: { type: string }
+    CommunityQuestionInput:
+      type: object
+      required: [question, language]
+      properties:
+        question: { type: string, minLength: 1, maxLength: 10000 }
+        screenshotRef: { type: ["string", "null"], maxLength: 500 }
+        language: { type: string, minLength: 2, maxLength: 20 }
+    CommunityQuestionResponse:
+      type: object
+      required: [id, status, confirmation]
+      properties:
+        id: { type: number }
+        status: { type: string, enum: [pending] }
+        confirmation: { type: string }
+    CommunityQuestion:
+      type: object
+      required: [id, question, screenshotRef, language, status, answer, answeredAt, createdAt]
+      properties:
+        id: { type: number }
+        question: { type: string }
+        screenshotRef: { type: ["string", "null"] }
+        language: { type: string }
+        status: { type: string, enum: [pending, answered] }
+        answer: { type: ["string", "null"] }
+        answeredAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+    CommunityAnswerInput:
+      type: object
+      required: [answer]
+      properties:
+        answer: { type: string, minLength: 1, maxLength: 1000000 }
+    FeedbackInput:
+      type: object
+      required: [responseId, rating]
+      properties:
+        responseId: { type: string, minLength: 1, maxLength: 100 }
+        sessionId: { type: ["string", "null"], maxLength: 200 }
+        rating: { type: string, enum: [positive, negative] }
+        comment: { type: ["string", "null"], maxLength: 200 }
+    FeedbackResponse:
+      type: object
+      required: [id, recorded]
+      properties:
+        id: { type: number }
+        recorded: { type: boolean }
+    FeedbackStats:
+      type: object
+      required: [totalResponses, positivePercentage, recentNegative]
+      properties:
+        totalResponses: { type: number }
+        positivePercentage: { type: number }
+        recentNegative:
+          type: array
+          items:
+            type: object
+            required: [id, responseId, comment, createdAt]
+            properties:
+              id: { type: number }
+              responseId: { type: string }
+              comment: { type: string }
+              createdAt: { type: string, format: date-time }
     ScrapeStatus:
       type: object
       required: [status, currentPage, totalPages, articlesScraped, lastRun, lastError, phase]

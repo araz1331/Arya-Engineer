@@ -158,6 +158,20 @@ export interface ArticleCount {
   count: number;
 }
 
+export interface AdminArticleSample {
+  id: number;
+  title: string;
+  /** @maxLength 300 */
+  content: string;
+  /** @nullable */
+  url: string | null;
+}
+
+export interface ArticleCleanupResponse {
+  scanned: number;
+  cleaned: number;
+}
+
 export interface CategoryCount {
   name: string;
   count: number;
@@ -218,6 +232,113 @@ export interface ChatReply {
   videos: ChatVideo[];
   sessionId: string;
   communityHandoff: boolean;
+  responseId: string;
+}
+
+export interface CommunityQuestionInput {
+  /**
+     * @minLength 1
+     * @maxLength 10000
+     */
+  question: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  screenshotRef?: string | null;
+  /**
+     * @minLength 2
+     * @maxLength 20
+     */
+  language: string;
+}
+
+export type CommunityQuestionResponseStatus = typeof CommunityQuestionResponseStatus[keyof typeof CommunityQuestionResponseStatus];
+
+
+export const CommunityQuestionResponseStatus = {
+  pending: 'pending',
+} as const;
+
+export interface CommunityQuestionResponse {
+  id: number;
+  status: CommunityQuestionResponseStatus;
+  confirmation: string;
+}
+
+export type CommunityQuestionStatus = typeof CommunityQuestionStatus[keyof typeof CommunityQuestionStatus];
+
+
+export const CommunityQuestionStatus = {
+  pending: 'pending',
+  answered: 'answered',
+} as const;
+
+export interface CommunityQuestion {
+  id: number;
+  question: string;
+  /** @nullable */
+  screenshotRef: string | null;
+  language: string;
+  status: CommunityQuestionStatus;
+  /** @nullable */
+  answer: string | null;
+  /** @nullable */
+  answeredAt: string | null;
+  createdAt: string;
+}
+
+export interface CommunityAnswerInput {
+  /**
+     * @minLength 1
+     * @maxLength 1000000
+     */
+  answer: string;
+}
+
+export type FeedbackInputRating = typeof FeedbackInputRating[keyof typeof FeedbackInputRating];
+
+
+export const FeedbackInputRating = {
+  positive: 'positive',
+  negative: 'negative',
+} as const;
+
+export interface FeedbackInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  responseId: string;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  sessionId?: string | null;
+  rating: FeedbackInputRating;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  comment?: string | null;
+}
+
+export interface FeedbackResponse {
+  id: number;
+  recorded: boolean;
+}
+
+export type FeedbackStatsRecentNegativeItem = {
+  id: number;
+  responseId: string;
+  comment: string;
+  createdAt: string;
+};
+
+export interface FeedbackStats {
+  totalResponses: number;
+  positivePercentage: number;
+  recentNegative: FeedbackStatsRecentNegativeItem[];
 }
 
 export type ScrapeStatusStatus = typeof ScrapeStatusStatus[keyof typeof ScrapeStatusStatus];
@@ -282,4 +403,25 @@ search?: string;
  */
 limit?: number;
 };
+
+export type GetAdminArticleSampleParams = {
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+count?: number;
+};
+
+export type ListCommunityQuestionsParams = {
+status?: ListCommunityQuestionsStatus;
+};
+
+export type ListCommunityQuestionsStatus = typeof ListCommunityQuestionsStatus[keyof typeof ListCommunityQuestionsStatus];
+
+
+export const ListCommunityQuestionsStatus = {
+  pending: 'pending',
+  answered: 'answered',
+  all: 'all',
+} as const;
 

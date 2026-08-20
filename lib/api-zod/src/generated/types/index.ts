@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminArticleSample';
 export * from './article';
+export * from './articleCleanupResponse';
 export * from './articleCount';
 export * from './articleInput';
 export * from './authSession';
@@ -20,9 +22,23 @@ export * from './chatInputImageMimeType';
 export * from './chatReply';
 export * from './chatSource';
 export * from './chatVideo';
+export * from './communityAnswerInput';
+export * from './communityQuestion';
+export * from './communityQuestionInput';
+export * from './communityQuestionResponse';
+export * from './communityQuestionResponseStatus';
+export * from './communityQuestionStatus';
+export * from './feedbackInput';
+export * from './feedbackInputRating';
+export * from './feedbackResponse';
+export * from './feedbackStats';
+export * from './feedbackStatsRecentNegativeItem';
+export * from './getAdminArticleSampleParams';
 export * from './healthStatus';
 export * from './knowledgeStats';
 export * from './listArticlesParams';
+export * from './listCommunityQuestionsParams';
+export * from './listCommunityQuestionsStatus';
 export * from './loginInput';
 export * from './loginInputArea';
 export * from './pdfArticleInput';

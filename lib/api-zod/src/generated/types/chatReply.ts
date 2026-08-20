@@ -15,4 +15,5 @@ export interface ChatReply {
   videos: ChatVideo[];
   sessionId: string;
   communityHandoff: boolean;
+  responseId: string;
 }

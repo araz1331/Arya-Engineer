@@ -121,6 +121,40 @@ export const GetArticleCountResponse = zod.object({
 
 
 /**
+ * @summary Get a random sample of indexed articles for admin review
+ */
+export const getAdminArticleSampleQueryCountDefault = 20;
+export const getAdminArticleSampleQueryCountMax = 100;
+
+
+
+export const GetAdminArticleSampleQueryParams = zod.object({
+  "count": zod.coerce.number().int().min(1).max(getAdminArticleSampleQueryCountMax).default(getAdminArticleSampleQueryCountDefault)
+})
+
+export const getAdminArticleSampleResponseContentMax = 300;
+
+
+
+export const GetAdminArticleSampleResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "content": zod.string().max(getAdminArticleSampleResponseContentMax),
+  "url": zod.string().nullable()
+})
+export const GetAdminArticleSampleResponse = zod.array(GetAdminArticleSampleResponseItem)
+
+
+/**
+ * @summary Remove navigation artifacts from all indexed articles
+ */
+export const CleanAllAdminArticlesResponse = zod.object({
+  "scanned": zod.number(),
+  "cleaned": zod.number()
+})
+
+
+/**
  * @summary Extract and save a PDF as a knowledge article
  */
 export const importPdfArticleBodyFilenameMax = 255;
@@ -244,7 +278,121 @@ export const ChatResponse = zod.object({
   "url": zod.string()
 })).max(chatResponseVideosMax),
   "sessionId": zod.string(),
-  "communityHandoff": zod.boolean()
+  "communityHandoff": zod.boolean(),
+  "responseId": zod.string()
+})
+
+
+/**
+ * @summary Submit a question for Teamcenter expert follow-up
+ */
+export const submitCommunityQuestionBodyQuestionMax = 10000;
+
+export const submitCommunityQuestionBodyScreenshotRefMax = 500;
+
+export const submitCommunityQuestionBodyLanguageMin = 2;
+export const submitCommunityQuestionBodyLanguageMax = 20;
+
+
+
+export const SubmitCommunityQuestionBody = zod.object({
+  "question": zod.string().min(1).max(submitCommunityQuestionBodyQuestionMax),
+  "screenshotRef": zod.string().max(submitCommunityQuestionBodyScreenshotRefMax).nullish(),
+  "language": zod.string().min(submitCommunityQuestionBodyLanguageMin).max(submitCommunityQuestionBodyLanguageMax)
+})
+
+export const SubmitCommunityQuestionResponse = zod.object({
+  "id": zod.number(),
+  "status": zod.enum(['pending']),
+  "confirmation": zod.string()
+})
+
+
+/**
+ * @summary Rate an assistant answer
+ */
+export const submitAnswerFeedbackBodyResponseIdMax = 100;
+
+export const submitAnswerFeedbackBodySessionIdMax = 200;
+
+export const submitAnswerFeedbackBodyCommentMax = 200;
+
+
+
+export const SubmitAnswerFeedbackBody = zod.object({
+  "responseId": zod.string().min(1).max(submitAnswerFeedbackBodyResponseIdMax),
+  "sessionId": zod.string().max(submitAnswerFeedbackBodySessionIdMax).nullish(),
+  "rating": zod.enum(['positive', 'negative']),
+  "comment": zod.string().max(submitAnswerFeedbackBodyCommentMax).nullish()
+})
+
+export const SubmitAnswerFeedbackResponse = zod.object({
+  "id": zod.number(),
+  "recorded": zod.boolean()
+})
+
+
+/**
+ * @summary List community questions for admin review
+ */
+export const listCommunityQuestionsQueryStatusDefault = `pending`;
+
+export const ListCommunityQuestionsQueryParams = zod.object({
+  "status": zod.enum(['pending', 'answered', 'all']).default(listCommunityQuestionsQueryStatusDefault)
+})
+
+export const ListCommunityQuestionsResponseItem = zod.object({
+  "id": zod.number(),
+  "question": zod.string(),
+  "screenshotRef": zod.string().nullable(),
+  "language": zod.string(),
+  "status": zod.enum(['pending', 'answered']),
+  "answer": zod.string().nullable(),
+  "answeredAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListCommunityQuestionsResponse = zod.array(ListCommunityQuestionsResponseItem)
+
+
+/**
+ * @summary Answer a community question and add it to the corpus
+ */
+export const AnswerCommunityQuestionParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const answerCommunityQuestionBodyAnswerMax = 1000000;
+
+
+
+export const AnswerCommunityQuestionBody = zod.object({
+  "answer": zod.string().min(1).max(answerCommunityQuestionBodyAnswerMax)
+})
+
+export const AnswerCommunityQuestionResponse = zod.object({
+  "id": zod.number(),
+  "question": zod.string(),
+  "screenshotRef": zod.string().nullable(),
+  "language": zod.string(),
+  "status": zod.enum(['pending', 'answered']),
+  "answer": zod.string().nullable(),
+  "answeredAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get answer feedback statistics
+ */
+export const GetFeedbackStatsResponse = zod.object({
+  "totalResponses": zod.number(),
+  "positivePercentage": zod.number(),
+  "recentNegative": zod.array(zod.object({
+  "id": zod.number(),
+  "responseId": zod.string(),
+  "comment": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 

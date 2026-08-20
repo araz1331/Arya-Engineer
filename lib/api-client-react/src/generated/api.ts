@@ -20,7 +20,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminArticleSample,
   Article,
+  ArticleCleanupResponse,
   ArticleCount,
   ArticleInput,
   AuthSession,
@@ -29,9 +31,18 @@ import type {
   BulkImportResponse,
   ChatInput,
   ChatReply,
+  CommunityAnswerInput,
+  CommunityQuestion,
+  CommunityQuestionInput,
+  CommunityQuestionResponse,
+  FeedbackInput,
+  FeedbackResponse,
+  FeedbackStats,
+  GetAdminArticleSampleParams,
   HealthStatus,
   KnowledgeStats,
   ListArticlesParams,
+  ListCommunityQuestionsParams,
   LoginInput,
   PdfArticleInput,
   ScrapeDebug,
@@ -525,6 +536,161 @@ export function useGetArticleCount<TData = Awaited<ReturnType<typeof getArticleC
 
 
 
+export const getGetAdminArticleSampleUrl = (params?: GetAdminArticleSampleParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/articles/sample?${stringifiedParams}` : `/api/admin/articles/sample`
+}
+
+/**
+ * @summary Get a random sample of indexed articles for admin review
+ */
+export const getAdminArticleSample = async (params?: GetAdminArticleSampleParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminArticleSample[]> => {
+
+  return customFetch<AdminArticleSample[]>(getGetAdminArticleSampleUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminArticleSampleQueryKey = (params?: GetAdminArticleSampleParams,) => {
+    return [
+    `/api/admin/articles/sample`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAdminArticleSampleQueryOptions = <TData = Awaited<ReturnType<typeof getAdminArticleSample>>, TError = ErrorType<void>>(params?: GetAdminArticleSampleParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminArticleSample>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminArticleSampleQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminArticleSample>>> = ({ signal }) => getAdminArticleSample(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminArticleSample>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminArticleSampleQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminArticleSample>>>
+export type GetAdminArticleSampleQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get a random sample of indexed articles for admin review
+ */
+
+export function useGetAdminArticleSample<TData = Awaited<ReturnType<typeof getAdminArticleSample>>, TError = ErrorType<void>>(
+ params?: GetAdminArticleSampleParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminArticleSample>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminArticleSampleQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCleanAllAdminArticlesUrl = () => {
+
+
+
+
+  return `/api/admin/articles/clean-all`
+}
+
+/**
+ * @summary Remove navigation artifacts from all indexed articles
+ */
+export const cleanAllAdminArticles = async ( options?: Parameters<typeof customFetch>[1]): Promise<ArticleCleanupResponse> => {
+
+  return customFetch<ArticleCleanupResponse>(getCleanAllAdminArticlesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCleanAllAdminArticlesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cleanAllAdminArticles>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cleanAllAdminArticles>>, TError,void, TContext> => {
+
+const mutationKey = ['cleanAllAdminArticles'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cleanAllAdminArticles>>, void> = () => {
+
+
+          return  cleanAllAdminArticles(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CleanAllAdminArticlesMutationResult = NonNullable<Awaited<ReturnType<typeof cleanAllAdminArticles>>>
+
+    export type CleanAllAdminArticlesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove navigation artifacts from all indexed articles
+ */
+export const useCleanAllAdminArticles = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cleanAllAdminArticles>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cleanAllAdminArticles>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCleanAllAdminArticlesMutationOptions(options));
+    }
+
 export const getImportPdfArticleUrl = () => {
 
 
@@ -737,6 +903,381 @@ export const useChat = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getChatMutationOptions(options));
     }
+
+export const getSubmitCommunityQuestionUrl = () => {
+
+
+
+
+  return `/api/community/questions`
+}
+
+/**
+ * @summary Submit a question for Teamcenter expert follow-up
+ */
+export const submitCommunityQuestion = async (communityQuestionInput: CommunityQuestionInput, options?: Parameters<typeof customFetch>[1]): Promise<CommunityQuestionResponse> => {
+
+  return customFetch<CommunityQuestionResponse>(getSubmitCommunityQuestionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(communityQuestionInput)
+  }
+);}
+
+
+
+
+
+export const getSubmitCommunityQuestionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitCommunityQuestion>>, TError,{data: BodyType<CommunityQuestionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitCommunityQuestion>>, TError,{data: BodyType<CommunityQuestionInput>}, TContext> => {
+
+const mutationKey = ['submitCommunityQuestion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitCommunityQuestion>>, {data: BodyType<CommunityQuestionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitCommunityQuestion(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitCommunityQuestionMutationResult = NonNullable<Awaited<ReturnType<typeof submitCommunityQuestion>>>
+    export type SubmitCommunityQuestionMutationBody = BodyType<CommunityQuestionInput>
+    export type SubmitCommunityQuestionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Submit a question for Teamcenter expert follow-up
+ */
+export const useSubmitCommunityQuestion = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitCommunityQuestion>>, TError,{data: BodyType<CommunityQuestionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitCommunityQuestion>>,
+        TError,
+        {data: BodyType<CommunityQuestionInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitCommunityQuestionMutationOptions(options));
+    }
+
+export const getSubmitAnswerFeedbackUrl = () => {
+
+
+
+
+  return `/api/feedback`
+}
+
+/**
+ * @summary Rate an assistant answer
+ */
+export const submitAnswerFeedback = async (feedbackInput: FeedbackInput, options?: Parameters<typeof customFetch>[1]): Promise<FeedbackResponse> => {
+
+  return customFetch<FeedbackResponse>(getSubmitAnswerFeedbackUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(feedbackInput)
+  }
+);}
+
+
+
+
+
+export const getSubmitAnswerFeedbackMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAnswerFeedback>>, TError,{data: BodyType<FeedbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitAnswerFeedback>>, TError,{data: BodyType<FeedbackInput>}, TContext> => {
+
+const mutationKey = ['submitAnswerFeedback'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitAnswerFeedback>>, {data: BodyType<FeedbackInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitAnswerFeedback(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitAnswerFeedbackMutationResult = NonNullable<Awaited<ReturnType<typeof submitAnswerFeedback>>>
+    export type SubmitAnswerFeedbackMutationBody = BodyType<FeedbackInput>
+    export type SubmitAnswerFeedbackMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Rate an assistant answer
+ */
+export const useSubmitAnswerFeedback = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAnswerFeedback>>, TError,{data: BodyType<FeedbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitAnswerFeedback>>,
+        TError,
+        {data: BodyType<FeedbackInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitAnswerFeedbackMutationOptions(options));
+    }
+
+export const getListCommunityQuestionsUrl = (params?: ListCommunityQuestionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/community/questions?${stringifiedParams}` : `/api/admin/community/questions`
+}
+
+/**
+ * @summary List community questions for admin review
+ */
+export const listCommunityQuestions = async (params?: ListCommunityQuestionsParams, options?: Parameters<typeof customFetch>[1]): Promise<CommunityQuestion[]> => {
+
+  return customFetch<CommunityQuestion[]>(getListCommunityQuestionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCommunityQuestionsQueryKey = (params?: ListCommunityQuestionsParams,) => {
+    return [
+    `/api/admin/community/questions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListCommunityQuestionsQueryOptions = <TData = Awaited<ReturnType<typeof listCommunityQuestions>>, TError = ErrorType<unknown>>(params?: ListCommunityQuestionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCommunityQuestions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCommunityQuestionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCommunityQuestions>>> = ({ signal }) => listCommunityQuestions(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCommunityQuestions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCommunityQuestionsQueryResult = NonNullable<Awaited<ReturnType<typeof listCommunityQuestions>>>
+export type ListCommunityQuestionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List community questions for admin review
+ */
+
+export function useListCommunityQuestions<TData = Awaited<ReturnType<typeof listCommunityQuestions>>, TError = ErrorType<unknown>>(
+ params?: ListCommunityQuestionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCommunityQuestions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCommunityQuestionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAnswerCommunityQuestionUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/community/questions/${id}/answer`
+}
+
+/**
+ * @summary Answer a community question and add it to the corpus
+ */
+export const answerCommunityQuestion = async (id: number,
+    communityAnswerInput: CommunityAnswerInput, options?: Parameters<typeof customFetch>[1]): Promise<CommunityQuestion> => {
+
+  return customFetch<CommunityQuestion>(getAnswerCommunityQuestionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(communityAnswerInput)
+  }
+);}
+
+
+
+
+
+export const getAnswerCommunityQuestionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof answerCommunityQuestion>>, TError,{id: number;data: BodyType<CommunityAnswerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof answerCommunityQuestion>>, TError,{id: number;data: BodyType<CommunityAnswerInput>}, TContext> => {
+
+const mutationKey = ['answerCommunityQuestion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof answerCommunityQuestion>>, {id: number;data: BodyType<CommunityAnswerInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  answerCommunityQuestion(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnswerCommunityQuestionMutationResult = NonNullable<Awaited<ReturnType<typeof answerCommunityQuestion>>>
+    export type AnswerCommunityQuestionMutationBody = BodyType<CommunityAnswerInput>
+    export type AnswerCommunityQuestionMutationError = ErrorType<void>
+
+    /**
+ * @summary Answer a community question and add it to the corpus
+ */
+export const useAnswerCommunityQuestion = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof answerCommunityQuestion>>, TError,{id: number;data: BodyType<CommunityAnswerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof answerCommunityQuestion>>,
+        TError,
+        {id: number;data: BodyType<CommunityAnswerInput>},
+        TContext
+      > => {
+      return useMutation(getAnswerCommunityQuestionMutationOptions(options));
+    }
+
+export const getGetFeedbackStatsUrl = () => {
+
+
+
+
+  return `/api/admin/feedback/stats`
+}
+
+/**
+ * @summary Get answer feedback statistics
+ */
+export const getFeedbackStats = async ( options?: Parameters<typeof customFetch>[1]): Promise<FeedbackStats> => {
+
+  return customFetch<FeedbackStats>(getGetFeedbackStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFeedbackStatsQueryKey = () => {
+    return [
+    `/api/admin/feedback/stats`
+    ] as const;
+    }
+
+
+export const getGetFeedbackStatsQueryOptions = <TData = Awaited<ReturnType<typeof getFeedbackStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFeedbackStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFeedbackStatsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFeedbackStats>>> = ({ signal }) => getFeedbackStats({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFeedbackStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFeedbackStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getFeedbackStats>>>
+export type GetFeedbackStatsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get answer feedback statistics
+ */
+
+export function useGetFeedbackStats<TData = Awaited<ReturnType<typeof getFeedbackStats>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFeedbackStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFeedbackStatsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getStartScrapeUrl = () => {
 
