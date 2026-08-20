@@ -24,9 +24,9 @@ function Router() {
     };
   });
 
-  const handleLogin = (area: 'assistant' | 'admin') => {
-    sessionStorage.setItem(`arya_${area}_access`, 'true');
-    setAuth((current) => ({ ...current, [area]: true }));
+  const handleAdminLogin = () => {
+    sessionStorage.setItem('arya_admin_access', 'true');
+    setAuth({ admin: true });
   };
 
   if (location === '/about' || location === '/about/') {
@@ -36,7 +36,7 @@ function Router() {
   // Routes logic
   if (location === '/admin') {
     if (!auth.admin) {
-      return <LoginPage area="admin" onLogin={() => handleLogin('admin')} />;
+      return <LoginPage onLogin={handleAdminLogin} />;
     }
     return <AdminPage />;
   }

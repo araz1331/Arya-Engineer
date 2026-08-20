@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLogin } from '@workspace/api-client-react';
 import { Wrench, ArrowRight, Loader2, Lock } from 'lucide-react';
 
-export function LoginPage({ area, onLogin }: { area: 'assistant' | 'admin', onLogin: () => void }) {
+export function LoginPage({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const login = useLogin();
@@ -41,7 +41,7 @@ export function LoginPage({ area, onLogin }: { area: 'assistant' | 'admin', onLo
             <Lock className="w-6 h-6" />
           </div>
           <h1 className="text-center font-medium text-xl mb-2">
-            {area === 'admin' ? 'Admin access' : 'Engineering assistant'}
+            Admin access
           </h1>
           <p className="text-center text-sm text-muted-foreground mb-8">
             Enter password to continue

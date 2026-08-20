@@ -3,10 +3,9 @@ import { timingSafeEqual } from "node:crypto";
 import { count, desc, eq, sql } from "drizzle-orm";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { ai } from "@workspace/integrations-gemini-ai";
-import { db, articlesTable, answerFeedbackTable, communityQuestionsTable, scraperProgressTable } from "@workspace/db";
-import { AnswerCommunityQuestionBody, AnswerCommunityQuestionParams, AnswerCommunityQuestionResponse, BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, DebugScrapeResponse, GetArticleCountResponse, GetFeedbackStatsResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, ListCommunityQuestionsQueryParams, ListCommunityQuestionsResponse, LoginBody, LoginResponse, SeedScrapeUrlsBody, SeedScrapeUrlsResponse, StartScrapeResponse, SubmitAnswerFeedbackBody, SubmitAnswerFeedbackResponse, SubmitCommunityQuestionBody, SubmitCommunityQuestionResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
-import { getArticleList, searchArticles, ensureStarterArticles, toArticleResponse, extractRelatedVideos } from "../lib/knowledge";
-import { debugScrape, getScraperStatus, runScraper, seedArticleUrls, subscribeScraperProgress } from "../lib/scraper";
+import { db, articlesTable, answerFeedbackTable, communityQuestionsTable } from "@workspace/db";
+import { AnswerCommunityQuestionBody, AnswerCommunityQuestionParams, AnswerCommunityQuestionResponse, BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, GetArticleCountResponse, GetFeedbackStatsResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, ListCommunityQuestionsQueryParams, ListCommunityQuestionsResponse, LoginBody, LoginResponse, SubmitAnswerFeedbackBody, SubmitAnswerFeedbackResponse, SubmitCommunityQuestionBody, SubmitCommunityQuestionResponse } from "@workspace/api-zod";
+import { getArticleList, searchArticles, toArticleResponse, extractRelatedVideos } from "../lib/knowledge";
 import { cleanContent } from "../lib/content";
 
 const router: IRouter = Router();
@@ -78,7 +77,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const expected = parsed.data.area === "admin" ? process.env.ADMIN_PASSWORD : process.env.APP_PASSWORD;
+  const expected = process.env.ADMIN_PASSWORD;
   if (!expected) {
     res.status(503).json({ error: "Password access is not configured." });
     return;
@@ -94,14 +93,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 });
 
 router.get("/stats", async (_req, res): Promise<void> => {
-  await ensureStarterArticles();
   const [articleCount] = await db.select({ total: count() }).from(articlesTable);
-  const [progress] = await db.select().from(scraperProgressTable).limit(1);
   const categoryRows = await db.select({ name: articlesTable.category, total: count() }).from(articlesTable).groupBy(articlesTable.category).orderBy(desc(count()));
   res.json(GetStatsResponse.parse({
     totalArticles: Number(articleCount?.total ?? 0),
     indexedArticles: Number(articleCount?.total ?? 0),
-    lastScraped: progress?.lastRun ?? null,
     categories: categoryRows.map((row) => ({ name: row.name ?? "Uncategorized", count: Number(row.total) })),
   }));
 });
@@ -226,9 +222,9 @@ router.post("/articles/pdf", async (req, res): Promise<void> => {
 });
 
 router.post("/articles/bulk", async (req, res): Promise<void> => {
-  const configuredSecret = process.env.SCRAPER_SECRET;
+  const configuredSecret = process.env.BULK_IMPORT_SECRET ?? process.env.ADMIN_PASSWORD;
   if (!configuredSecret) {
-    res.status(503).json({ error: "SCRAPER_SECRET is not configured." });
+    res.status(503).json({ error: "Bulk import access is not configured." });
     return;
   }
   const authorization = req.get("authorization") ?? "";
@@ -237,7 +233,7 @@ router.post("/articles/bulk", async (req, res): Promise<void> => {
   const received = Buffer.from(token);
   const validToken = expected.length === received.length && timingSafeEqual(expected, received);
   if (!validToken) {
-    res.status(401).json({ error: "A valid scraper bearer token is required." });
+    res.status(401).json({ error: "A valid bulk import bearer token is required." });
     return;
   }
 
@@ -462,47 +458,6 @@ router.get("/admin/feedback/stats", async (_req, res): Promise<void> => {
     positivePercentage: totalResponses ? Math.round((Number(positive?.total ?? 0) / totalResponses) * 1000) / 10 : 0,
     recentNegative: recentNegative.map((item) => ({ ...item, comment: item.comment ?? "" })),
   }));
-});
-
-router.post("/scrape/start", async (_req, res): Promise<void> => {
-  const status = await getScraperStatus();
-  if (status.status !== "running") void runScraper();
-  res.status(202).json(StartScrapeResponse.parse(status.status === "running" ? status : { ...status, status: "running", lastRun: new Date() }));
-});
-
-router.post("/scrape/seed", async (req, res): Promise<void> => {
-  const parsed = SeedScrapeUrlsBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-  res.status(201).json(SeedScrapeUrlsResponse.parse(await seedArticleUrls(parsed.data.urls)));
-});
-
-router.get("/scrape/status", async (_req, res): Promise<void> => {
-  res.json(GetScrapeStatusResponse.parse(await getScraperStatus()));
-});
-
-router.get("/scrape/events", async (_req, res): Promise<void> => {
-  res.status(200);
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
-  const send = (status: Awaited<ReturnType<typeof getScraperStatus>>) => {
-    res.write(`event: progress\ndata: ${JSON.stringify(status)}\n\n`);
-  };
-  send(await getScraperStatus());
-  const unsubscribe = subscribeScraperProgress(send);
-  const heartbeat = setInterval(() => res.write(": keepalive\n\n"), 15_000);
-  _req.on("close", () => {
-    clearInterval(heartbeat);
-    unsubscribe();
-  });
-});
-
-router.get("/scrape/debug", async (_req, res): Promise<void> => {
-  res.json(DebugScrapeResponse.parse(await debugScrape()));
 });
 
 export default router;
