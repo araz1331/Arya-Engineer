@@ -3,6 +3,7 @@ import { useChat, useSubmitAnswerFeedback, useSubmitCommunityQuestion } from '@w
 import { Wrench, Camera, Send, X, Share, Link as LinkIcon, RefreshCcw, Loader2, AlertCircle, ShieldCheck, Mic, MicOff, Download, Video, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { ImageAnnotator } from '../components/ImageAnnotator';
 import { InstallGuideModal, type InstallPlatform } from '../components/InstallGuideModal';
+import { SiteFooter } from '../components/SiteFooter';
 import { trackEvent } from '../lib/analytics';
 
 const UI_COPY = {
@@ -452,6 +453,7 @@ export function AssistantPage() {
             {t.askAnother}
           </button>
         </footer>
+        <SiteFooter />
       </div>
     );
   }
@@ -571,6 +573,7 @@ export function AssistantPage() {
         </div>
         <div className="mt-7 flex items-center justify-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" /> Your photo stays protected</div>
       </main>
+       <SiteFooter />
       {isInstallGuideOpen && (
         <InstallGuideModal
           platform={installPlatform}
