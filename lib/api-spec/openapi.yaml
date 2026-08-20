@@ -391,7 +391,7 @@ components:
         url: { type: string }
     ChatReply:
       type: object
-      required: [answer, sources, videos, sessionId]
+      required: [answer, sources, videos, sessionId, communityHandoff]
       properties:
         answer: { type: string }
         sources:
@@ -404,6 +404,7 @@ components:
           items:
             $ref: "#/components/schemas/ChatVideo"
         sessionId: { type: string }
+        communityHandoff: { type: boolean }
     ScrapeStatus:
       type: object
       required: [status, currentPage, totalPages, articlesScraped, lastRun, lastError, phase]

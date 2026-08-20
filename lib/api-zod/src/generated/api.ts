@@ -243,7 +243,8 @@ export const ChatResponse = zod.object({
   "title": zod.string(),
   "url": zod.string()
 })).max(chatResponseVideosMax),
-  "sessionId": zod.string()
+  "sessionId": zod.string(),
+  "communityHandoff": zod.boolean()
 })
 
 

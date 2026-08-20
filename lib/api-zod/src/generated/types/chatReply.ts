@@ -14,4 +14,5 @@ export interface ChatReply {
   /** @maxItems 2 */
   videos: ChatVideo[];
   sessionId: string;
+  communityHandoff: boolean;
 }

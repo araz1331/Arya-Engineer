@@ -217,6 +217,7 @@ export interface ChatReply {
   /** @maxItems 2 */
   videos: ChatVideo[];
   sessionId: string;
+  communityHandoff: boolean;
 }
 
 export type ScrapeStatusStatus = typeof ScrapeStatusStatus[keyof typeof ScrapeStatusStatus];

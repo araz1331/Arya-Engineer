@@ -263,6 +263,15 @@ export function AssistantPage() {
           <div className="bg-card border border-border p-5 rounded-2xl rounded-tl-sm text-sm text-foreground leading-relaxed shadow-sm mb-8">
             <div className="whitespace-pre-wrap">{reply.answer}</div>
           </div>
+
+          {reply.communityHandoff && (
+            <button
+              type="button"
+              className="mb-6 w-full rounded-2xl border border-primary/40 bg-primary/10 px-5 py-4 text-left text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-primary/20 active:scale-[0.99]"
+            >
+              Send to community — get answer from a Teamcenter expert
+            </button>
+          )}
           
           {reply.sources && reply.sources.length > 0 && (
             <div className="mb-6">
