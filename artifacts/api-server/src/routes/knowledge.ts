@@ -299,8 +299,8 @@ router.post("/chat", async (req, res): Promise<void> => {
   // quoted phrases survive translation before exact-term extraction.
   const retrievalQuery = [parsed.data.message, englishSearchQuery, imageAnalysis].filter(Boolean).join("\n");
   const retrievedMatches = await searchArticles(retrievalQuery);
-  const bestMatchScore = retrievedMatches[0]?.score ?? 0;
-  const communityHandoff = bestMatchScore < 0.7;
+  const relevantMatches = retrievedMatches.filter(({ score }) => score >= 0.4);
+  const communityHandoff = relevantMatches.length === 0;
   const sessionId = parsed.data.sessionId ?? crypto.randomUUID();
   const responseId = crypto.randomUUID();
   if (communityHandoff) {
@@ -314,7 +314,7 @@ router.post("/chat", async (req, res): Promise<void> => {
     }));
     return;
   }
-  const matches = retrievedMatches;
+  const matches = relevantMatches;
   const context = matches.map(({ article }) => `Article title: ${article.title}\n${article.content}`).join("\n\n");
   const sourceGuidance = matches.length > 0
     ? `Sources were found (${matches.length} article${matches.length === 1 ? "" : "s"}). You MUST use them to construct a helpful best-effort answer. Treat the closest relevant articles as useful even when their titles or wording are not an exact match: for example, an article titled "Configuring Teamcenter Project" is relevant to a question about configuring a workflow. Synthesize practical steps from the provided content and clearly distinguish direct guidance from a reasonable inference. Never say "I don't have information", "not found", or that the corpus has no answer when one or more articles are provided.`
