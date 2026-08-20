@@ -6,7 +6,7 @@ import { ai } from "@workspace/integrations-gemini-ai";
 import { db, articlesTable, scraperProgressTable } from "@workspace/db";
 import { BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, DebugScrapeResponse, GetArticleCountResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, LoginBody, LoginResponse, SeedScrapeUrlsBody, SeedScrapeUrlsResponse, StartScrapeResponse, GetScrapeStatusResponse } from "@workspace/api-zod";
 import { getArticleList, searchArticles, ensureStarterArticles, toArticleResponse, extractRelatedVideos } from "../lib/knowledge";
-import { debugScrape, getScraperStatus, runScraper, seedArticleUrls } from "../lib/scraper";
+import { debugScrape, getScraperStatus, runScraper, seedArticleUrls, subscribeScraperProgress } from "../lib/scraper";
 
 const router: IRouter = Router();
 
@@ -301,6 +301,24 @@ router.post("/scrape/seed", async (req, res): Promise<void> => {
 
 router.get("/scrape/status", async (_req, res): Promise<void> => {
   res.json(GetScrapeStatusResponse.parse(await getScraperStatus()));
+});
+
+router.get("/scrape/events", async (_req, res): Promise<void> => {
+  res.status(200);
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+  const send = (status: Awaited<ReturnType<typeof getScraperStatus>>) => {
+    res.write(`event: progress\ndata: ${JSON.stringify(status)}\n\n`);
+  };
+  send(await getScraperStatus());
+  const unsubscribe = subscribeScraperProgress(send);
+  const heartbeat = setInterval(() => res.write(": keepalive\n\n"), 15_000);
+  _req.on("close", () => {
+    clearInterval(heartbeat);
+    unsubscribe();
+  });
 });
 
 router.get("/scrape/debug", async (_req, res): Promise<void> => {

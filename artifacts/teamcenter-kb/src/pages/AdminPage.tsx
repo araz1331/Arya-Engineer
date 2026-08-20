@@ -1,4 +1,4 @@
-import { useState, useRef, FormEvent, ChangeEvent } from 'react';
+import { useState, useRef, FormEvent, ChangeEvent, useEffect } from 'react';
 import { 
   useGetStats, useListArticles, useStartScrape, useGetScrapeStatus, 
   useCreateArticle, useImportPdfArticle, useBulkImportArticles, useSeedScrapeUrls, 
@@ -15,6 +15,23 @@ export function AdminPage() {
   const countQuery = useGetArticleCount({ query: { queryKey: getGetArticleCountQueryKey(), staleTime: 30000 } });
   const scrapeStatus = useGetScrapeStatus({ query: { queryKey: getGetScrapeStatusQueryKey(), refetchInterval: 5000 } });
   const startScrape = useStartScrape();
+
+  useEffect(() => {
+    const events = new EventSource('/api/scrape/events');
+    events.addEventListener('progress', (event) => {
+      try {
+        const nextStatus = JSON.parse((event as MessageEvent).data);
+        scrapeStatus.refetch();
+        if (nextStatus.status === 'complete' || nextStatus.status === 'error') {
+          stats.refetch();
+          countQuery.refetch();
+        }
+      } catch {
+        // The polling query remains the safe fallback if an event is malformed.
+      }
+    });
+    return () => events.close();
+  }, []);
   
   const handleScrape = () => {
     startScrape.mutate(undefined, {
