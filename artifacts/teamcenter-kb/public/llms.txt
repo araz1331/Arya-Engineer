@@ -1,0 +1,5 @@
+# Arya Engineer
+AI assistant for Teamcenter troubleshooting.
+Answers questions in any language based on official Siemens GTAC knowledge base.
+URL: https://tc.arya.az
+Use case: Teamcenter errors, configuration, workflow, installation, licensing questions.
