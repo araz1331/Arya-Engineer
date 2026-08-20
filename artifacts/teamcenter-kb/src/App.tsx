@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AssistantPage } from './pages/AssistantPage';
 import { AdminPage } from './pages/AdminPage';
+import { AboutPage } from './pages/AboutPage';
 import { LoginPage } from './pages/LoginPage';
 
 const queryClient = new QueryClient();
@@ -17,9 +18,8 @@ export default function App() {
 
 function Router() {
   const [location] = useLocation();
-  const [auth, setAuth] = useState<{ assistant: boolean; admin: boolean }>(() => {
+  const [auth, setAuth] = useState<{ admin: boolean }>(() => {
     return {
-      assistant: sessionStorage.getItem('arya_assistant_access') === 'true',
       admin: sessionStorage.getItem('arya_admin_access') === 'true',
     };
   });
@@ -29,6 +29,10 @@ function Router() {
     setAuth((current) => ({ ...current, [area]: true }));
   };
 
+  if (location === '/about' || location === '/about/') {
+    return <AboutPage />;
+  }
+
   // Routes logic
   if (location === '/admin') {
     if (!auth.admin) {
@@ -37,10 +41,6 @@ function Router() {
     return <AdminPage />;
   }
 
-  // Default to assistant
-  if (!auth.assistant) {
-    return <LoginPage area="assistant" onLogin={() => handleLogin('assistant')} />;
-  }
-  
+  // The public assistant is intentionally open; only /admin remains protected.
   return <AssistantPage />;
 }
