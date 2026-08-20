@@ -1,10 +1,9 @@
-const CACHE_NAME = 'arya-engineer-shell-v1';
+const CACHE_NAME = 'arya-engineer-shell-v2';
 const APP_SHELL = [
   '/',
   '/manifest.json',
-  '/favicon.svg',
-  '/icons/arya-192.svg',
-  '/icons/arya-512.svg'
+  '/arya-engineer-icon-512.jpeg',
+  '/arya-engineer-social.jpeg'
 ];
 
 self.addEventListener('install', (event) => {
