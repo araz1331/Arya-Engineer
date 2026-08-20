@@ -10,6 +10,5 @@ export type AuthSessionArea = typeof AuthSessionArea[keyof typeof AuthSessionAre
 
 
 export const AuthSessionArea = {
-  assistant: 'assistant',
   admin: 'admin',
 } as const;

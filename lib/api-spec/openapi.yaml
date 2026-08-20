@@ -12,14 +12,12 @@ tags:
     description: Health operations
   - name: knowledge
     description: Teamcenter knowledge base and RAG operations
-  - name: scraper
-    description: Siemens GTAC scraper operations
 paths:
   /auth/login:
     post:
       operationId: login
       tags: [knowledge]
-      summary: Verify a shared assistant or admin password
+      summary: Verify the admin password
       requestBody:
         required: true
         content:
@@ -180,9 +178,9 @@ paths:
     post:
       operationId: bulkImportArticles
       tags: [knowledge]
-      summary: Import articles from a local scraper
+      summary: Import a batch of knowledge articles
       security:
-        - scraperBearer: []
+        - bulkImportBearer: []
       requestBody:
         required: true
         content:
@@ -199,9 +197,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/BulkImportResponse"
         "401":
-          description: Missing or invalid scraper bearer token
+          description: Missing or invalid bulk import bearer token
         "503":
-          description: SCRAPER_SECRET is not configured
+          description: Bulk import access is not configured
   /chat:
     post:
       operationId: chat
@@ -315,63 +313,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FeedbackStats"
-  /scrape/start:
-    post:
-      operationId: startScrape
-      tags: [scraper]
-      summary: Start or resume the Siemens GTAC scraper
-      responses:
-        "202":
-          description: Scraper accepted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ScrapeStatus"
-  /scrape/seed:
-    post:
-      operationId: seedScrapeUrls
-      tags: [scraper]
-      summary: Add public article URLs to the scraper queue
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SeedUrlsInput"
-      responses:
-        "201":
-          description: Seed URL import result
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SeedUrlsResponse"
-  /scrape/status:
-    get:
-      operationId: getScrapeStatus
-      tags: [scraper]
-      summary: Get scraper progress
-      responses:
-        "200":
-          description: Scraper progress
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ScrapeStatus"
-  /scrape/debug:
-    get:
-      operationId: debugScrape
-      tags: [scraper]
-      summary: Test GTAC access with the current scraper session
-      responses:
-        "200":
-          description: GTAC response diagnostics
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ScrapeDebug"
 components:
   securitySchemes:
-    scraperBearer:
+    bulkImportBearer:
       type: http
       scheme: bearer
       bearerFormat: opaque
@@ -383,7 +327,7 @@ components:
         password: { type: string, minLength: 1, maxLength: 200 }
         area:
           type: string
-          enum: [assistant, admin]
+          enum: [admin]
     AuthSession:
       type: object
       required: [authenticated, area]
@@ -391,7 +335,7 @@ components:
         authenticated: { type: boolean }
         area:
           type: string
-          enum: [assistant, admin]
+          enum: [admin]
     HealthStatus:
       type: object
       properties:
@@ -401,7 +345,7 @@ components:
         - status
     Article:
       type: object
-      required: [id, title, content, category, tags, url, scrapedAt, sourceUpdatedAt]
+      required: [id, title, content, category, tags, url]
       properties:
         id: { type: number }
         title: { type: string }
@@ -411,8 +355,6 @@ components:
           type: array
           items: { type: string }
         url: { type: ["string", "null"] }
-        scrapedAt: { type: string, format: date-time }
-        sourceUpdatedAt: { type: ["string", "null"], format: date-time }
     ArticleInput:
       type: object
       required: [title, content, tags]
@@ -454,24 +396,12 @@ components:
           type: array
           maxItems: 500
           items:
-            $ref: "#/components/schemas/ScraperArticleInput"
+            $ref: "#/components/schemas/ArticleInput"
     BulkArticleImportArray:
       type: array
       maxItems: 500
       items:
-        $ref: "#/components/schemas/ScraperArticleInput"
-    ScraperArticleInput:
-      type: object
-      required: [title, content, category, tags, url]
-      properties:
-        title: { type: string, minLength: 1, maxLength: 500 }
-        content: { type: string, minLength: 1, maxLength: 1000000 }
-        category: { type: string, maxLength: 120 }
-        tags:
-          type: array
-          maxItems: 50
-          items: { type: string, minLength: 1, maxLength: 80 }
-        url: { type: string, minLength: 1, maxLength: 2000 }
+        $ref: "#/components/schemas/ArticleInput"
     ArticleCount:
       type: object
       required: [count]
@@ -494,11 +424,10 @@ components:
         cleaned: { type: number }
     KnowledgeStats:
       type: object
-      required: [totalArticles, indexedArticles, lastScraped, categories]
+      required: [totalArticles, indexedArticles, categories]
       properties:
         totalArticles: { type: number }
         indexedArticles: { type: number }
-        lastScraped: { type: ["string", "null"], format: date-time }
         categories:
           type: array
           items:
@@ -614,44 +543,4 @@ components:
               responseId: { type: string }
               comment: { type: string }
               createdAt: { type: string, format: date-time }
-    ScrapeStatus:
-      type: object
-      required: [status, currentPage, totalPages, articlesScraped, lastRun, lastError, phase]
-      properties:
-        status:
-          type: string
-          enum: [idle, running, complete, error]
-        currentPage: { type: number }
-        totalPages: { type: number }
-        articlesScraped: { type: number }
-        lastRun: { type: ["string", "null"], format: date-time }
-        lastError: { type: ["string", "null"] }
-        phase:
-          type: string
-          enum: [discover, content]
-    ScrapeDebug:
-      type: object
-      required: [statusCode, responseHeaders, bodyPreview]
-      properties:
-        statusCode: { type: number }
-        responseHeaders:
-          type: object
-          additionalProperties: { type: string }
-        bodyPreview: { type: string }
-    SeedUrlsInput:
-      type: object
-      required: [urls]
-      properties:
-        urls:
-          type: array
-          minItems: 1
-          maxItems: 5000
-          items: { type: string, minLength: 1, maxLength: 2000 }
-    SeedUrlsResponse:
-      type: object
-      required: [added, skipped, invalid]
-      properties:
-        added: { type: number }
-        skipped: { type: number }
-        invalid: { type: number }
 

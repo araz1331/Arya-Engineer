@@ -5,9 +5,9 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { ScraperArticleInput } from './scraperArticleInput';
+import type { ArticleInput } from './articleInput';
 
 export interface BulkArticleImportInput {
   /** @maxItems 500 */
-  articles: ScraperArticleInput[];
+  articles: ArticleInput[];
 }

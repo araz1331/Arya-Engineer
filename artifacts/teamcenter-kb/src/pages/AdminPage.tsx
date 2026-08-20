@@ -1,49 +1,19 @@
-import { useState, useRef, FormEvent, ChangeEvent, useEffect } from 'react';
+import { useState, useRef, FormEvent, ChangeEvent } from 'react';
 import { 
-  useGetStats, useListArticles, useStartScrape, useGetScrapeStatus, 
-  useCreateArticle, useImportPdfArticle, useBulkImportArticles, useSeedScrapeUrls, 
+  useGetStats, useListArticles,
+  useCreateArticle, useImportPdfArticle, useBulkImportArticles,
   useGetArticleCount, useListCommunityQuestions, useAnswerCommunityQuestion, useGetFeedbackStats,
-  getGetStatsQueryKey, getGetArticleCountQueryKey, getGetScrapeStatusQueryKey
+  getGetStatsQueryKey, getGetArticleCountQueryKey
 } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 import { 
-  Activity, Database, Upload, RefreshCw, ChevronLeft, 
+  Activity, Database, Upload, ChevronLeft,
   Plus, Search as SearchIcon, AlertCircle, Wrench, MessageCircle, ThumbsDown
 } from 'lucide-react';
 
 export function AdminPage() {
   const stats = useGetStats({ query: { queryKey: getGetStatsQueryKey(), staleTime: 30000 } });
   const countQuery = useGetArticleCount({ query: { queryKey: getGetArticleCountQueryKey(), staleTime: 30000 } });
-  const scrapeStatus = useGetScrapeStatus({ query: { queryKey: getGetScrapeStatusQueryKey(), refetchInterval: 5000 } });
-  const startScrape = useStartScrape();
-
-  useEffect(() => {
-    const events = new EventSource('/api/scrape/events');
-    events.addEventListener('progress', (event) => {
-      try {
-        const nextStatus = JSON.parse((event as MessageEvent).data);
-        scrapeStatus.refetch();
-        if (nextStatus.status === 'complete' || nextStatus.status === 'error') {
-          stats.refetch();
-          countQuery.refetch();
-        }
-      } catch {
-        // The polling query remains the safe fallback if an event is malformed.
-      }
-    });
-    return () => events.close();
-  }, []);
-  
-  const handleScrape = () => {
-    startScrape.mutate(undefined, {
-      onSuccess: () => {
-        scrapeStatus.refetch();
-      }
-    });
-  };
-
-  const isScraping = scrapeStatus.data?.status === 'running';
-
   return (
     <div className="min-h-[100dvh] bg-background text-foreground pb-16">
       <header className="bg-card border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-10">
@@ -63,48 +33,19 @@ export function AdminPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Corpus Size</span>
-              <Database className="w-5 h-5 text-primary" />
-            </div>
-            <div className="text-4xl font-light tracking-tight">
-              {stats.isLoading ? '...' : stats.data?.indexedArticles.toLocaleString() || '0'}
-            </div>
-            <div className="text-sm text-muted-foreground mt-3 font-mono">
-              Total discovered: {countQuery.data?.count || 0}
-            </div>
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Corpus Management</span>
+            <Database className="w-5 h-5 text-primary" />
           </div>
-          
-          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm md:col-span-2">
-            <div className="flex items-center justify-between mb-6">
-              <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Scraper Status</span>
-              <Activity className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <div className="text-xl font-medium mb-1">
-                  {scrapeStatus.isLoading ? 'Checking status...' : scrapeStatus.data?.status === 'running' ? 'Scraping in progress' : 'Scraper is idle'}
-                </div>
-                <div className="text-sm text-muted-foreground font-mono">
-                  {scrapeStatus.data?.status === 'running' && (
-                    <span>Phase: {scrapeStatus.data.phase} ({scrapeStatus.data.currentPage}/{scrapeStatus.data.totalPages})</span>
-                  )}
-                  {scrapeStatus.data?.status !== 'running' && (
-                    <span>Last run: {scrapeStatus.data?.lastRun ? new Date(scrapeStatus.data.lastRun).toLocaleString() : 'Never'}</span>
-                  )}
-                </div>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <div className="text-4xl font-light tracking-tight">
+                {countQuery.isLoading ? '...' : countQuery.data?.count.toLocaleString() || '0'}
               </div>
-              <button 
-                onClick={handleScrape}
-                disabled={isScraping || startScrape.isPending}
-                className="bg-primary text-primary-foreground px-5 py-3 rounded-xl text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95 transition-transform"
-              >
-                <RefreshCw className={`w-4 h-4 ${isScraping ? 'animate-spin' : ''}`} />
-                {isScraping ? 'Running...' : 'Run Scraper'}
-              </button>
+              <div className="text-sm text-muted-foreground mt-3">Articles in the knowledge base</div>
             </div>
+            <Activity className="w-8 h-8 text-primary/30" />
           </div>
         </div>
 
@@ -163,7 +104,6 @@ function CommunityPanel() {
 
 function CorpusIngestion({ onRefresh }: { onRefresh: () => void }) {
   const [form, setForm] = useState({ title: '', content: '', category: 'Troubleshooting', tags: '', url: '' });
-  const [seedText, setSeedText] = useState('');
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   const pdfInputRef = useRef<HTMLInputElement>(null);
@@ -172,7 +112,6 @@ function CorpusIngestion({ onRefresh }: { onRefresh: () => void }) {
   const createArticle = useCreateArticle();
   const importPdf = useImportPdfArticle();
   const bulkImport = useBulkImportArticles();
-  const seedUrls = useSeedScrapeUrls();
 
   const showError = (error: unknown) => {
     const message = error instanceof Error ? error.message : 'The import could not be completed.';
@@ -250,18 +189,6 @@ function CorpusIngestion({ onRefresh }: { onRefresh: () => void }) {
     reader.readAsText(file);
   };
 
-  const submitSeeds = (urls: string[], label: string) => {
-    const normalized = urls.map((url) => url.trim()).filter(Boolean);
-    if (!normalized.length) return;
-    seedUrls.mutate({ data: { urls: normalized } }, {
-      onSuccess: (result) => {
-        setNotice({ type: 'success', text: `${label}: ${result.added} added, ${result.skipped} skipped.` });
-        onRefresh();
-      },
-      onError: showError,
-    });
-  };
-
   return (
     <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4 border-b border-border/50 pb-6">
@@ -288,7 +215,7 @@ function CorpusIngestion({ onRefresh }: { onRefresh: () => void }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 gap-10">
         <form onSubmit={saveArticle} className="space-y-4">
           <h3 className="font-medium mb-4 text-sm uppercase tracking-wider text-muted-foreground">Manual Entry</h3>
           <input 
@@ -318,19 +245,6 @@ function CorpusIngestion({ onRefresh }: { onRefresh: () => void }) {
           </button>
         </form>
 
-        <form onSubmit={(e) => { e.preventDefault(); submitSeeds(seedText.split('\n'), 'Seed URLs'); }} className="space-y-4">
-          <h3 className="font-medium mb-4 text-sm uppercase tracking-wider text-muted-foreground">Seed URLs</h3>
-          <textarea 
-            placeholder="https://support.sw.siemens.com/..." 
-            value={seedText}
-            onChange={(e) => setSeedText(e.target.value)}
-            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all h-52 resize-none font-mono"
-            required
-          />
-          <button type="submit" disabled={seedUrls.isPending} className="bg-background border border-border hover:bg-muted text-foreground px-4 py-3 rounded-xl text-sm font-medium w-full active:scale-[0.98] transition-all disabled:opacity-50">
-            Queue for Scraper
-          </button>
-        </form>
       </div>
     </div>
   );

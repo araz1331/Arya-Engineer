@@ -44,11 +44,7 @@ import type {
   ListArticlesParams,
   ListCommunityQuestionsParams,
   LoginInput,
-  PdfArticleInput,
-  ScrapeDebug,
-  ScrapeStatus,
-  SeedUrlsInput,
-  SeedUrlsResponse
+  PdfArticleInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -87,7 +83,7 @@ export const getLoginUrl = () => {
 }
 
 /**
- * @summary Verify a shared assistant or admin password
+ * @summary Verify the admin password
  */
 export const login = async (loginInput: LoginInput, options?: Parameters<typeof customFetch>[1]): Promise<AuthSession> => {
 
@@ -136,7 +132,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type LoginMutationError = ErrorType<void>
 
     /**
- * @summary Verify a shared assistant or admin password
+ * @summary Verify the admin password
  */
 export const useLogin = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -771,7 +767,7 @@ export const getBulkImportArticlesUrl = () => {
 }
 
 /**
- * @summary Import articles from a local scraper
+ * @summary Import a batch of knowledge articles
  */
 export const bulkImportArticles = async (bulkArticleImportArrayBulkArticleImportInput: BulkArticleImportArray | BulkArticleImportInput, options?: Parameters<typeof customFetch>[1]): Promise<BulkImportResponse> => {
 
@@ -820,7 +816,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type BulkImportArticlesMutationError = ErrorType<void>
 
     /**
- * @summary Import articles from a local scraper
+ * @summary Import a batch of knowledge articles
  */
 export const useBulkImportArticles = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkImportArticles>>, TError,{data: BodyType<BulkArticleImportArray | BulkArticleImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -1267,302 +1263,6 @@ export function useGetFeedbackStats<TData = Awaited<ReturnType<typeof getFeedbac
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetFeedbackStatsQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getStartScrapeUrl = () => {
-
-
-
-
-  return `/api/scrape/start`
-}
-
-/**
- * @summary Start or resume the Siemens GTAC scraper
- */
-export const startScrape = async ( options?: Parameters<typeof customFetch>[1]): Promise<ScrapeStatus> => {
-
-  return customFetch<ScrapeStatus>(getStartScrapeUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-
-export const getStartScrapeMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startScrape>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof startScrape>>, TError,void, TContext> => {
-
-const mutationKey = ['startScrape'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startScrape>>, void> = () => {
-
-
-          return  startScrape(requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type StartScrapeMutationResult = NonNullable<Awaited<ReturnType<typeof startScrape>>>
-
-    export type StartScrapeMutationError = ErrorType<unknown>
-
-    /**
- * @summary Start or resume the Siemens GTAC scraper
- */
-export const useStartScrape = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startScrape>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof startScrape>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getStartScrapeMutationOptions(options));
-    }
-
-export const getSeedScrapeUrlsUrl = () => {
-
-
-
-
-  return `/api/scrape/seed`
-}
-
-/**
- * @summary Add public article URLs to the scraper queue
- */
-export const seedScrapeUrls = async (seedUrlsInput: SeedUrlsInput, options?: Parameters<typeof customFetch>[1]): Promise<SeedUrlsResponse> => {
-
-  return customFetch<SeedUrlsResponse>(getSeedScrapeUrlsUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(seedUrlsInput)
-  }
-);}
-
-
-
-
-
-export const getSeedScrapeUrlsMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof seedScrapeUrls>>, TError,{data: BodyType<SeedUrlsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof seedScrapeUrls>>, TError,{data: BodyType<SeedUrlsInput>}, TContext> => {
-
-const mutationKey = ['seedScrapeUrls'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof seedScrapeUrls>>, {data: BodyType<SeedUrlsInput>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  seedScrapeUrls(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type SeedScrapeUrlsMutationResult = NonNullable<Awaited<ReturnType<typeof seedScrapeUrls>>>
-    export type SeedScrapeUrlsMutationBody = BodyType<SeedUrlsInput>
-    export type SeedScrapeUrlsMutationError = ErrorType<unknown>
-
-    /**
- * @summary Add public article URLs to the scraper queue
- */
-export const useSeedScrapeUrls = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof seedScrapeUrls>>, TError,{data: BodyType<SeedUrlsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof seedScrapeUrls>>,
-        TError,
-        {data: BodyType<SeedUrlsInput>},
-        TContext
-      > => {
-      return useMutation(getSeedScrapeUrlsMutationOptions(options));
-    }
-
-export const getGetScrapeStatusUrl = () => {
-
-
-
-
-  return `/api/scrape/status`
-}
-
-/**
- * @summary Get scraper progress
- */
-export const getScrapeStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<ScrapeStatus> => {
-
-  return customFetch<ScrapeStatus>(getGetScrapeStatusUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetScrapeStatusQueryKey = () => {
-    return [
-    `/api/scrape/status`
-    ] as const;
-    }
-
-
-export const getGetScrapeStatusQueryOptions = <TData = Awaited<ReturnType<typeof getScrapeStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScrapeStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetScrapeStatusQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getScrapeStatus>>> = ({ signal }) => getScrapeStatus({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getScrapeStatus>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetScrapeStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getScrapeStatus>>>
-export type GetScrapeStatusQueryError = ErrorType<unknown>
-
-
-/**
- * @summary Get scraper progress
- */
-
-export function useGetScrapeStatus<TData = Awaited<ReturnType<typeof getScrapeStatus>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScrapeStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetScrapeStatusQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getDebugScrapeUrl = () => {
-
-
-
-
-  return `/api/scrape/debug`
-}
-
-/**
- * @summary Test GTAC access with the current scraper session
- */
-export const debugScrape = async ( options?: Parameters<typeof customFetch>[1]): Promise<ScrapeDebug> => {
-
-  return customFetch<ScrapeDebug>(getDebugScrapeUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getDebugScrapeQueryKey = () => {
-    return [
-    `/api/scrape/debug`
-    ] as const;
-    }
-
-
-export const getDebugScrapeQueryOptions = <TData = Awaited<ReturnType<typeof debugScrape>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof debugScrape>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getDebugScrapeQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof debugScrape>>> = ({ signal }) => debugScrape({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof debugScrape>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type DebugScrapeQueryResult = NonNullable<Awaited<ReturnType<typeof debugScrape>>>
-export type DebugScrapeQueryError = ErrorType<unknown>
-
-
-/**
- * @summary Test GTAC access with the current scraper session
- */
-
-export function useDebugScrape<TData = Awaited<ReturnType<typeof debugScrape>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof debugScrape>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getDebugScrapeQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -10,6 +10,5 @@ export type LoginInputArea = typeof LoginInputArea[keyof typeof LoginInputArea];
 
 
 export const LoginInputArea = {
-  assistant: 'assistant',
   admin: 'admin',
 } as const;

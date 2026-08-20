@@ -12,7 +12,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
     if (!password) return;
     setError('');
     login.mutate(
-      { data: { password, area } },
+      { data: { password, area: 'admin' } },
       {
         onSuccess: (res) => {
           if (res.authenticated) {

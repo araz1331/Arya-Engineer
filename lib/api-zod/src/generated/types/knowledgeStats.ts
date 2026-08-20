@@ -10,7 +10,5 @@ import type { CategoryCount } from './categoryCount';
 export interface KnowledgeStats {
   totalArticles: number;
   indexedArticles: number;
-  /** @nullable */
-  lastScraped: Date | null;
   categories: CategoryCount[];
 }

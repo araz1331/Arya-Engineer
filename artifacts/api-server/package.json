@@ -7,7 +7,6 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "scrape:community": "node ./community-scraper.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -16,15 +15,13 @@
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/integrations-gemini-ai": "workspace:*",
-    "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "drizzle-orm": "catalog:",
     "express": "^5.2.1",
     "pdfjs-dist": "^6.2.108",
     "pino": "^9.14.0",
-    "pino-http": "^10.5.0",
-    "puppeteer": "24.19.0"
+    "pino-http": "^10.5.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

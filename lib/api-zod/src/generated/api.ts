@@ -9,7 +9,7 @@ import * as zod from 'zod';
 
 
 /**
- * @summary Verify a shared assistant or admin password
+ * @summary Verify the admin password
  */
 export const loginBodyPasswordMax = 200;
 
@@ -17,12 +17,12 @@ export const loginBodyPasswordMax = 200;
 
 export const LoginBody = zod.object({
   "password": zod.string().min(1).max(loginBodyPasswordMax),
-  "area": zod.enum(['assistant', 'admin'])
+  "area": zod.enum(['admin'])
 })
 
 export const LoginResponse = zod.object({
   "authenticated": zod.boolean(),
-  "area": zod.enum(['assistant', 'admin'])
+  "area": zod.enum(['admin'])
 })
 
 
@@ -41,7 +41,6 @@ export const HealthCheckResponse = zod.object({
 export const GetStatsResponse = zod.object({
   "totalArticles": zod.number(),
   "indexedArticles": zod.number(),
-  "lastScraped": zod.coerce.date().nullable(),
   "categories": zod.array(zod.object({
   "name": zod.string(),
   "count": zod.number()
@@ -68,9 +67,7 @@ export const ListArticlesResponseItem = zod.object({
   "content": zod.string(),
   "category": zod.string().nullable(),
   "tags": zod.array(zod.string()),
-  "url": zod.string().nullable(),
-  "scrapedAt": zod.coerce.date(),
-  "sourceUpdatedAt": zod.coerce.date().nullable()
+  "url": zod.string().nullable()
 })
 export const ListArticlesResponse = zod.array(ListArticlesResponseItem)
 
@@ -106,9 +103,7 @@ export const CreateArticleResponse = zod.object({
   "content": zod.string(),
   "category": zod.string().nullable(),
   "tags": zod.array(zod.string()),
-  "url": zod.string().nullable(),
-  "scrapedAt": zod.coerce.date(),
-  "sourceUpdatedAt": zod.coerce.date().nullable()
+  "url": zod.string().nullable()
 })
 
 
@@ -186,14 +181,12 @@ export const ImportPdfArticleResponse = zod.object({
   "content": zod.string(),
   "category": zod.string().nullable(),
   "tags": zod.array(zod.string()),
-  "url": zod.string().nullable(),
-  "scrapedAt": zod.coerce.date(),
-  "sourceUpdatedAt": zod.coerce.date().nullable()
+  "url": zod.string().nullable()
 })
 
 
 /**
- * @summary Import articles from a local scraper
+ * @summary Import a batch of knowledge articles
  */
 export const bulkImportArticlesBodyOneItemTitleMax = 500;
 
@@ -228,16 +221,16 @@ export const bulkImportArticlesBodyTwoArticlesMax = 500;
 export const BulkImportArticlesBody = zod.union([zod.array(zod.object({
   "title": zod.string().min(1).max(bulkImportArticlesBodyOneItemTitleMax),
   "content": zod.string().min(1).max(bulkImportArticlesBodyOneItemContentMax),
-  "category": zod.string().max(bulkImportArticlesBodyOneItemCategoryMax),
+  "category": zod.string().max(bulkImportArticlesBodyOneItemCategoryMax).nullish(),
   "tags": zod.array(zod.string().min(1).max(bulkImportArticlesBodyOneItemTagsItemMax)).max(bulkImportArticlesBodyOneItemTagsMax),
-  "url": zod.string().min(1).max(bulkImportArticlesBodyOneItemUrlMax)
+  "url": zod.string().max(bulkImportArticlesBodyOneItemUrlMax).nullish()
 })).max(bulkImportArticlesBodyOneMax),zod.object({
   "articles": zod.array(zod.object({
   "title": zod.string().min(1).max(bulkImportArticlesBodyTwoArticlesItemTitleMax),
   "content": zod.string().min(1).max(bulkImportArticlesBodyTwoArticlesItemContentMax),
-  "category": zod.string().max(bulkImportArticlesBodyTwoArticlesItemCategoryMax),
+  "category": zod.string().max(bulkImportArticlesBodyTwoArticlesItemCategoryMax).nullish(),
   "tags": zod.array(zod.string().min(1).max(bulkImportArticlesBodyTwoArticlesItemTagsItemMax)).max(bulkImportArticlesBodyTwoArticlesItemTagsMax),
-  "url": zod.string().min(1).max(bulkImportArticlesBodyTwoArticlesItemUrlMax)
+  "url": zod.string().max(bulkImportArticlesBodyTwoArticlesItemUrlMax).nullish()
 })).max(bulkImportArticlesBodyTwoArticlesMax)
 })])
 
@@ -393,64 +386,6 @@ export const GetFeedbackStatsResponse = zod.object({
   "comment": zod.string(),
   "createdAt": zod.coerce.date()
 }))
-})
-
-
-/**
- * @summary Start or resume the Siemens GTAC scraper
- */
-export const StartScrapeResponse = zod.object({
-  "status": zod.enum(['idle', 'running', 'complete', 'error']),
-  "currentPage": zod.number(),
-  "totalPages": zod.number(),
-  "articlesScraped": zod.number(),
-  "lastRun": zod.coerce.date().nullable(),
-  "lastError": zod.string().nullable(),
-  "phase": zod.enum(['discover', 'content'])
-})
-
-
-/**
- * @summary Add public article URLs to the scraper queue
- */
-export const seedScrapeUrlsBodyUrlsItemMax = 2000;
-
-export const seedScrapeUrlsBodyUrlsMax = 5000;
-
-
-
-export const SeedScrapeUrlsBody = zod.object({
-  "urls": zod.array(zod.string().min(1).max(seedScrapeUrlsBodyUrlsItemMax)).min(1).max(seedScrapeUrlsBodyUrlsMax)
-})
-
-export const SeedScrapeUrlsResponse = zod.object({
-  "added": zod.number(),
-  "skipped": zod.number(),
-  "invalid": zod.number()
-})
-
-
-/**
- * @summary Get scraper progress
- */
-export const GetScrapeStatusResponse = zod.object({
-  "status": zod.enum(['idle', 'running', 'complete', 'error']),
-  "currentPage": zod.number(),
-  "totalPages": zod.number(),
-  "articlesScraped": zod.number(),
-  "lastRun": zod.coerce.date().nullable(),
-  "lastError": zod.string().nullable(),
-  "phase": zod.enum(['discover', 'content'])
-})
-
-
-/**
- * @summary Test GTAC access with the current scraper session
- */
-export const DebugScrapeResponse = zod.object({
-  "statusCode": zod.number(),
-  "responseHeaders": zod.record(zod.string(), zod.string()),
-  "bodyPreview": zod.string()
 })
 
 

@@ -9,7 +9,6 @@ export type LoginInputArea = typeof LoginInputArea[keyof typeof LoginInputArea];
 
 
 export const LoginInputArea = {
-  assistant: 'assistant',
   admin: 'admin',
 } as const;
 
@@ -26,7 +25,6 @@ export type AuthSessionArea = typeof AuthSessionArea[keyof typeof AuthSessionAre
 
 
 export const AuthSessionArea = {
-  assistant: 'assistant',
   admin: 'admin',
 } as const;
 
@@ -48,9 +46,6 @@ export interface Article {
   tags: string[];
   /** @nullable */
   url: string | null;
-  scrapedAt: string;
-  /** @nullable */
-  sourceUpdatedAt: string | null;
 }
 
 export interface ArticleInput {
@@ -118,41 +113,15 @@ export interface BulkImportResponse {
   skipped: number;
 }
 
-export interface ScraperArticleInput {
-  /**
-     * @minLength 1
-     * @maxLength 500
-     */
-  title: string;
-  /**
-     * @minLength 1
-     * @maxLength 1000000
-     */
-  content: string;
-  /** @maxLength 120 */
-  category: string;
-  /**
-     * @maxItems 50
-     * @items.minLength 1
-     * @items.maxLength 80
-     */
-  tags: string[];
-  /**
-     * @minLength 1
-     * @maxLength 2000
-     */
-  url: string;
-}
-
 export interface BulkArticleImportInput {
   /** @maxItems 500 */
-  articles: ScraperArticleInput[];
+  articles: ArticleInput[];
 }
 
 /**
  * @maxItems 500
  */
-export type BulkArticleImportArray = ScraperArticleInput[];
+export type BulkArticleImportArray = ArticleInput[];
 
 export interface ArticleCount {
   count: number;
@@ -180,8 +149,6 @@ export interface CategoryCount {
 export interface KnowledgeStats {
   totalArticles: number;
   indexedArticles: number;
-  /** @nullable */
-  lastScraped: string | null;
   categories: CategoryCount[];
 }
 
@@ -339,60 +306,6 @@ export interface FeedbackStats {
   totalResponses: number;
   positivePercentage: number;
   recentNegative: FeedbackStatsRecentNegativeItem[];
-}
-
-export type ScrapeStatusStatus = typeof ScrapeStatusStatus[keyof typeof ScrapeStatusStatus];
-
-
-export const ScrapeStatusStatus = {
-  idle: 'idle',
-  running: 'running',
-  complete: 'complete',
-  error: 'error',
-} as const;
-
-export type ScrapeStatusPhase = typeof ScrapeStatusPhase[keyof typeof ScrapeStatusPhase];
-
-
-export const ScrapeStatusPhase = {
-  discover: 'discover',
-  content: 'content',
-} as const;
-
-export interface ScrapeStatus {
-  status: ScrapeStatusStatus;
-  currentPage: number;
-  totalPages: number;
-  articlesScraped: number;
-  /** @nullable */
-  lastRun: string | null;
-  /** @nullable */
-  lastError: string | null;
-  phase: ScrapeStatusPhase;
-}
-
-export type ScrapeDebugResponseHeaders = {[key: string]: string};
-
-export interface ScrapeDebug {
-  statusCode: number;
-  responseHeaders: ScrapeDebugResponseHeaders;
-  bodyPreview: string;
-}
-
-export interface SeedUrlsInput {
-  /**
-     * @minItems 1
-     * @maxItems 5000
-     * @items.minLength 1
-     * @items.maxLength 2000
-     */
-  urls: string[];
-}
-
-export interface SeedUrlsResponse {
-  added: number;
-  skipped: number;
-  invalid: number;
 }
 
 export type ListArticlesParams = {

@@ -15,7 +15,4 @@ export interface Article {
   tags: string[];
   /** @nullable */
   url: string | null;
-  scrapedAt: Date;
-  /** @nullable */
-  sourceUpdatedAt: Date | null;
 }
