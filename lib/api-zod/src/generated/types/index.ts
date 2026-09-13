@@ -7,6 +7,8 @@
  */
 
 export * from './adminArticleSample';
+export * from './adminLoginInput';
+export * from './adminToken';
 export * from './analyticsEventInput';
 export * from './analyticsEventInputEventType';
 export * from './analyticsEventResponse';
@@ -18,8 +20,6 @@ export * from './article';
 export * from './articleCleanupResponse';
 export * from './articleCount';
 export * from './articleInput';
-export * from './authSession';
-export * from './authSessionArea';
 export * from './bulkArticleImportArray';
 export * from './bulkArticleImportInput';
 export * from './bulkImportResponse';
@@ -46,6 +46,4 @@ export * from './knowledgeStats';
 export * from './listArticlesParams';
 export * from './listCommunityQuestionsParams';
 export * from './listCommunityQuestionsStatus';
-export * from './loginInput';
-export * from './loginInputArea';
 export * from './pdfArticleInput';

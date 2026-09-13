@@ -1,29 +1,30 @@
 import { useState } from 'react';
-import { useLogin } from '@workspace/api-client-react';
+import { useAdminLogin } from '@workspace/api-client-react';
 import { Wrench, ArrowRight, Loader2, Lock } from 'lucide-react';
 
-export function LoginPage({ onLogin }: { onLogin: () => void }) {
+export function LoginPage({ onLogin }: { onLogin: (token: string, expiresAt: number) => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const login = useLogin();
+  const login = useAdminLogin();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!password) return;
     setError('');
     login.mutate(
-      { data: { password, area: 'admin' } },
+      { data: { password } },
       {
         onSuccess: (res) => {
-          if (res.authenticated) {
-            onLogin();
-          } else {
-            setError('Wrong password');
-          }
+          setPassword('');
+          onLogin(res.token, res.expiresAt);
         },
-        onError: () => {
-            setError('Wrong password');
-        }
+        onError: (err) => {
+          const status = (err as { status?: number }).status;
+          if (status === 429) setError('Too many attempts. Try again later.');
+          else if (status === 503) setError('Admin access is not configured on the server.');
+          else if (status === 401) setError('Wrong password');
+          else setError('Login failed. Please try again.');
+        },
       }
     );
   };

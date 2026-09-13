@@ -1,12 +1,34 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AssistantPage } from './pages/AssistantPage';
 import { AdminPage } from './pages/AdminPage';
 import { AboutPage } from './pages/AboutPage';
 import { LoginPage } from './pages/LoginPage';
+import {
+  ADMIN_LOGOUT_EVENT,
+  getAdminToken,
+  handleAdminUnauthorized,
+  initAdminAuth,
+  isUnauthorizedError,
+  setAdminToken,
+} from './lib/adminAuth';
 
-const queryClient = new QueryClient();
+initAdminAuth();
+
+const onApiError = (error: unknown) => {
+  if (isUnauthorizedError(error) && getAdminToken()) handleAdminUnauthorized();
+};
+
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({ onError: onApiError }),
+  mutationCache: new MutationCache({ onError: onApiError }),
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => !isUnauthorizedError(error) && failureCount < 3,
+    },
+  },
+});
 
 export default function App() {
   return (
@@ -18,15 +40,20 @@ export default function App() {
 
 function Router() {
   const [location] = useLocation();
-  const [auth, setAuth] = useState<{ admin: boolean }>(() => {
-    return {
-      admin: sessionStorage.getItem('arya_admin_access') === 'true',
-    };
-  });
+  const [isAdmin, setIsAdmin] = useState(() => getAdminToken() !== null);
 
-  const handleAdminLogin = () => {
-    sessionStorage.setItem('arya_admin_access', 'true');
-    setAuth({ admin: true });
+  useEffect(() => {
+    const onLogout = () => {
+      setIsAdmin(false);
+      queryClient.removeQueries();
+    };
+    window.addEventListener(ADMIN_LOGOUT_EVENT, onLogout);
+    return () => window.removeEventListener(ADMIN_LOGOUT_EVENT, onLogout);
+  }, []);
+
+  const handleAdminLogin = (token: string, expiresAt: number) => {
+    setAdminToken(token, expiresAt);
+    setIsAdmin(true);
   };
 
   if (location === '/about' || location === '/about/') {
@@ -35,7 +62,8 @@ function Router() {
 
   // Routes logic
   if (location === '/admin') {
-    if (!auth.admin) {
+    // The server enforces admin auth; this only decides whether to show the login form.
+    if (!isAdmin || getAdminToken() === null) {
       return <LoginPage onLogin={handleAdminLogin} />;
     }
     return <AdminPage />;

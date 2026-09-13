@@ -21,6 +21,8 @@ import type {
 
 import type {
   AdminArticleSample,
+  AdminLoginInput,
+  AdminToken,
   AnalyticsEventInput,
   AnalyticsEventResponse,
   AnalyticsStats,
@@ -28,7 +30,6 @@ import type {
   ArticleCleanupResponse,
   ArticleCount,
   ArticleInput,
-  AuthSession,
   BulkArticleImportArray,
   BulkArticleImportInput,
   BulkImportResponse,
@@ -46,7 +47,6 @@ import type {
   KnowledgeStats,
   ListArticlesParams,
   ListCommunityQuestionsParams,
-  LoginInput,
   PdfArticleInput
 } from './api.schemas';
 
@@ -77,25 +77,25 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export const getLoginUrl = () => {
+export const getAdminLoginUrl = () => {
 
 
 
 
-  return `/api/auth/login`
+  return `/api/admin/login`
 }
 
 /**
- * @summary Verify the admin password
+ * @summary Exchange the admin password for a signed, expiring bearer token
  */
-export const login = async (loginInput: LoginInput, options?: Parameters<typeof customFetch>[1]): Promise<AuthSession> => {
+export const adminLogin = async (adminLoginInput: AdminLoginInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminToken> => {
 
-  return customFetch<AuthSession>(getLoginUrl(),
+  return customFetch<AdminToken>(getAdminLoginUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(loginInput)
+    body: JSON.stringify(adminLoginInput)
   }
 );}
 
@@ -103,11 +103,11 @@ export const login = async (loginInput: LoginInput, options?: Parameters<typeof 
 
 
 
-export const getLoginMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginInput>}, TContext> => {
+export const getAdminLoginMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,{data: BodyType<AdminLoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,{data: BodyType<AdminLoginInput>}, TContext> => {
 
-const mutationKey = ['login'];
+const mutationKey = ['adminLogin'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -117,10 +117,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof login>>, {data: BodyType<LoginInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminLogin>>, {data: BodyType<AdminLoginInput>}> = (props) => {
           const {data} = props ?? {};
 
-          return  login(data,requestOptions)
+          return  adminLogin(data,requestOptions)
         }
 
 
@@ -130,22 +130,22 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>
-    export type LoginMutationBody = BodyType<LoginInput>
-    export type LoginMutationError = ErrorType<void>
+    export type AdminLoginMutationResult = NonNullable<Awaited<ReturnType<typeof adminLogin>>>
+    export type AdminLoginMutationBody = BodyType<AdminLoginInput>
+    export type AdminLoginMutationError = ErrorType<void>
 
     /**
- * @summary Verify the admin password
+ * @summary Exchange the admin password for a signed, expiring bearer token
  */
-export const useLogin = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useAdminLogin = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,{data: BodyType<AdminLoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof login>>,
+        Awaited<ReturnType<typeof adminLogin>>,
         TError,
-        {data: BodyType<LoginInput>},
+        {data: BodyType<AdminLoginInput>},
         TContext
       > => {
-      return useMutation(getLoginMutationOptions(options));
+      return useMutation(getAdminLoginMutationOptions(options));
     }
 
 export const getHealthCheckUrl = () => {
@@ -645,7 +645,7 @@ export const cleanAllAdminArticles = async ( options?: Parameters<typeof customF
 
 
 
-export const getCleanAllAdminArticlesMutationOptions = <TError = ErrorType<unknown>,
+export const getCleanAllAdminArticlesMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cleanAllAdminArticles>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof cleanAllAdminArticles>>, TError,void, TContext> => {
 
@@ -674,12 +674,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CleanAllAdminArticlesMutationResult = NonNullable<Awaited<ReturnType<typeof cleanAllAdminArticles>>>
 
-    export type CleanAllAdminArticlesMutationError = ErrorType<unknown>
+    export type CleanAllAdminArticlesMutationError = ErrorType<void>
 
     /**
  * @summary Remove navigation artifacts from all indexed articles
  */
-export const useCleanAllAdminArticles = <TError = ErrorType<unknown>,
+export const useCleanAllAdminArticles = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cleanAllAdminArticles>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof cleanAllAdminArticles>>,
@@ -716,7 +716,7 @@ export const importPdfArticle = async (pdfArticleInput: PdfArticleInput, options
 
 
 
-export const getImportPdfArticleMutationOptions = <TError = ErrorType<unknown>,
+export const getImportPdfArticleMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importPdfArticle>>, TError,{data: BodyType<PdfArticleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof importPdfArticle>>, TError,{data: BodyType<PdfArticleInput>}, TContext> => {
 
@@ -745,12 +745,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ImportPdfArticleMutationResult = NonNullable<Awaited<ReturnType<typeof importPdfArticle>>>
     export type ImportPdfArticleMutationBody = BodyType<PdfArticleInput>
-    export type ImportPdfArticleMutationError = ErrorType<unknown>
+    export type ImportPdfArticleMutationError = ErrorType<void>
 
     /**
  * @summary Extract and save a PDF as a knowledge article
  */
-export const useImportPdfArticle = <TError = ErrorType<unknown>,
+export const useImportPdfArticle = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importPdfArticle>>, TError,{data: BodyType<PdfArticleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof importPdfArticle>>,
@@ -1156,7 +1156,7 @@ export const getListCommunityQuestionsQueryKey = (params?: ListCommunityQuestion
     }
 
 
-export const getListCommunityQuestionsQueryOptions = <TData = Awaited<ReturnType<typeof listCommunityQuestions>>, TError = ErrorType<unknown>>(params?: ListCommunityQuestionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCommunityQuestions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListCommunityQuestionsQueryOptions = <TData = Awaited<ReturnType<typeof listCommunityQuestions>>, TError = ErrorType<void>>(params?: ListCommunityQuestionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCommunityQuestions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1175,14 +1175,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListCommunityQuestionsQueryResult = NonNullable<Awaited<ReturnType<typeof listCommunityQuestions>>>
-export type ListCommunityQuestionsQueryError = ErrorType<unknown>
+export type ListCommunityQuestionsQueryError = ErrorType<void>
 
 
 /**
  * @summary List community questions for admin review
  */
 
-export function useListCommunityQuestions<TData = Awaited<ReturnType<typeof listCommunityQuestions>>, TError = ErrorType<unknown>>(
+export function useListCommunityQuestions<TData = Awaited<ReturnType<typeof listCommunityQuestions>>, TError = ErrorType<void>>(
  params?: ListCommunityQuestionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCommunityQuestions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -1305,7 +1305,7 @@ export const getGetFeedbackStatsQueryKey = () => {
     }
 
 
-export const getGetFeedbackStatsQueryOptions = <TData = Awaited<ReturnType<typeof getFeedbackStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFeedbackStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetFeedbackStatsQueryOptions = <TData = Awaited<ReturnType<typeof getFeedbackStats>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFeedbackStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1324,14 +1324,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetFeedbackStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getFeedbackStats>>>
-export type GetFeedbackStatsQueryError = ErrorType<unknown>
+export type GetFeedbackStatsQueryError = ErrorType<void>
 
 
 /**
  * @summary Get answer feedback statistics
  */
 
-export function useGetFeedbackStats<TData = Awaited<ReturnType<typeof getFeedbackStats>>, TError = ErrorType<unknown>>(
+export function useGetFeedbackStats<TData = Awaited<ReturnType<typeof getFeedbackStats>>, TError = ErrorType<void>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFeedbackStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -1382,7 +1382,7 @@ export const getGetAnalyticsStatsQueryKey = () => {
     }
 
 
-export const getGetAnalyticsStatsQueryOptions = <TData = Awaited<ReturnType<typeof getAnalyticsStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAnalyticsStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetAnalyticsStatsQueryOptions = <TData = Awaited<ReturnType<typeof getAnalyticsStats>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAnalyticsStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1401,14 +1401,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetAnalyticsStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getAnalyticsStats>>>
-export type GetAnalyticsStatsQueryError = ErrorType<unknown>
+export type GetAnalyticsStatsQueryError = ErrorType<void>
 
 
 /**
  * @summary Get anonymous product analytics for the admin dashboard
  */
 
-export function useGetAnalyticsStats<TData = Awaited<ReturnType<typeof getAnalyticsStats>>, TError = ErrorType<unknown>>(
+export function useGetAnalyticsStats<TData = Awaited<ReturnType<typeof getAnalyticsStats>>, TError = ErrorType<void>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAnalyticsStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {

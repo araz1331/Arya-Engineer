@@ -13,28 +13,31 @@ tags:
   - name: knowledge
     description: Teamcenter knowledge base and RAG operations
 paths:
-  /auth/login:
+  /admin/login:
     post:
-      operationId: login
+      operationId: adminLogin
       tags: [knowledge]
-      summary: Verify the admin password
+      summary: Exchange the admin password for a signed, expiring bearer token
+      security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LoginInput"
+              $ref: "#/components/schemas/AdminLoginInput"
       responses:
         "200":
-          description: Password verification result
+          description: Admin bearer token
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthSession"
+                $ref: "#/components/schemas/AdminToken"
         "401":
           description: Wrong password
+        "429":
+          description: Too many failed attempts
         "503":
-          description: Password access has not been configured
+          description: Admin access has not been configured
   /healthz:
     get:
       operationId: healthCheck
@@ -92,6 +95,8 @@ paths:
       operationId: createArticle
       tags: [knowledge]
       summary: Add a knowledge article manually
+      security:
+        - adminBearer: []
       requestBody:
         required: true
         content:
@@ -107,6 +112,8 @@ paths:
                 $ref: "#/components/schemas/Article"
         "409":
           description: An article with the same URL already exists
+        "401":
+          description: Missing or invalid admin bearer token
   /articles/count:
     get:
       operationId: getArticleCount
@@ -124,6 +131,8 @@ paths:
       operationId: getAdminArticleSample
       tags: [knowledge]
       summary: Get a random sample of indexed articles for admin review
+      security:
+        - adminBearer: []
       parameters:
         - name: count
           in: query
@@ -144,11 +153,15 @@ paths:
                   $ref: "#/components/schemas/AdminArticleSample"
         "400":
           description: Invalid sample size
+        "401":
+          description: Missing or invalid admin bearer token
   /admin/articles/clean-all:
     post:
       operationId: cleanAllAdminArticles
       tags: [knowledge]
       summary: Remove navigation artifacts from all indexed articles
+      security:
+        - adminBearer: []
       responses:
         "200":
           description: Cleanup result
@@ -156,11 +169,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ArticleCleanupResponse"
+        "401":
+          description: Missing or invalid admin bearer token
   /articles/pdf:
     post:
       operationId: importPdfArticle
       tags: [knowledge]
       summary: Extract and save a PDF as a knowledge article
+      security:
+        - adminBearer: []
       requestBody:
         required: true
         content:
@@ -174,6 +191,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Article"
+        "401":
+          description: Missing or invalid admin bearer token
   /articles/bulk:
     post:
       operationId: bulkImportArticles
@@ -181,6 +200,7 @@ paths:
       summary: Import a batch of knowledge articles
       security:
         - bulkImportBearer: []
+        - adminBearer: []
       requestBody:
         required: true
         content:
@@ -197,7 +217,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/BulkImportResponse"
         "401":
-          description: Missing or invalid bulk import bearer token
+          description: Missing or invalid bulk import token or admin bearer token
         "503":
           description: Bulk import access is not configured
   /chat:
@@ -277,6 +297,8 @@ paths:
       operationId: listCommunityQuestions
       tags: [knowledge]
       summary: List community questions for admin review
+      security:
+        - adminBearer: []
       parameters:
         - name: status
           in: query
@@ -294,11 +316,15 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CommunityQuestion"
+        "401":
+          description: Missing or invalid admin bearer token
   /admin/community/questions/{id}/answer:
     post:
       operationId: answerCommunityQuestion
       tags: [knowledge]
       summary: Answer a community question and add it to the corpus
+      security:
+        - adminBearer: []
       parameters:
         - name: id
           in: path
@@ -319,11 +345,15 @@ paths:
                 $ref: "#/components/schemas/CommunityQuestion"
         "404":
           description: Question not found
+        "401":
+          description: Missing or invalid admin bearer token
   /admin/feedback/stats:
     get:
       operationId: getFeedbackStats
       tags: [knowledge]
       summary: Get answer feedback statistics
+      security:
+        - adminBearer: []
       responses:
         "200":
           description: Feedback statistics
@@ -331,11 +361,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FeedbackStats"
+        "401":
+          description: Missing or invalid admin bearer token
   /admin/analytics:
     get:
       operationId: getAnalyticsStats
       tags: [knowledge]
       summary: Get anonymous product analytics for the admin dashboard
+      security:
+        - adminBearer: []
       responses:
         "200":
           description: Product analytics grouped by time period
@@ -343,29 +377,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AnalyticsStats"
+        "401":
+          description: Missing or invalid admin bearer token
 components:
   securitySchemes:
+    adminBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Signed, expiring admin token returned by POST /admin/login
     bulkImportBearer:
       type: http
       scheme: bearer
       bearerFormat: opaque
   schemas:
-    LoginInput:
+    AdminLoginInput:
       type: object
-      required: [password, area]
+      required: [password]
       properties:
         password: { type: string, minLength: 1, maxLength: 200 }
-        area:
-          type: string
-          enum: [admin]
-    AuthSession:
+    AdminToken:
       type: object
-      required: [authenticated, area]
+      required: [token, expiresAt]
       properties:
-        authenticated: { type: boolean }
-        area:
-          type: string
-          enum: [admin]
+        token: { type: string }
+        expiresAt:
+          type: number
+          description: Token expiry as Unix epoch milliseconds
     HealthStatus:
       type: object
       properties:

@@ -25,13 +25,16 @@ admins answer from the `/admin` page (answers are added back to the corpus). Adm
   Google Gemini `gemini-2.5-flash` via `@google/genai` / Replit-managed Gemini integration (screenshot vision only)
 - **Retrieval**: lexical, DB-backed ranker in `artifacts/api-server/src/lib/knowledge.ts` (no embeddings; the
   `articles.embedding` column is unused). Exact error-code/quoted-phrase matching boosts scores; threshold 0.4.
-- **Auth**: single shared `ADMIN_PASSWORD` (timing-safe compare); bearer token for bulk import. No user accounts.
+- **Auth**: single shared `ADMIN_PASSWORD` exchanged at `POST /api/admin/login` for a stateless HMAC-signed bearer token
+  (12h, `ADMIN_TOKEN_SECRET`); static bearer token for automated bulk import. No user accounts.
 - Payments / messaging: none.
 
 ## Key directories
 
 - `artifacts/teamcenter-kb/` — public web app (Assistant `/`, About `/about`, Admin `/admin` behind LoginPage)
-- `artifacts/api-server/src/routes/knowledge.ts` — all product endpoints (chat, articles, import, community, feedback, analytics, login)
+- `artifacts/api-server/src/routes/knowledge.ts` — all product endpoints (chat, articles, import, community, feedback, analytics, admin login)
+- `artifacts/api-server/src/middlewares/admin-auth.ts` — admin token issue/verify, `requireAdmin` middleware, login throttle
+- `artifacts/teamcenter-kb/src/lib/adminAuth.ts` — browser-side admin token storage + 401 handling
 - `artifacts/api-server/src/lib/knowledge.ts` — article search/ranking, video link extraction
 - `artifacts/api-server/src/lib/content.ts` — `cleanContent()` strips GTAC page boilerplate from imported articles
 - `artifacts/mockup-sandbox/` — Replit "Canvas" component preview server (design tooling, not the product)
@@ -95,11 +98,19 @@ Deploy by clicking Publish in Replit. There is no Dockerfile, CI workflow, or Ve
 - **Answer format**: Claude must not emit `[Source N]` markers; `replaceNumberedSourcesWithTitles` rewrites them to article titles.
 - **Retrieval behavior**: score threshold 0.4 decides community handoff; `articles.url` is unique and imports use
   `onConflictDoNothing` on it (duplicates are skipped). Always run imported content through `cleanContent()`.
-- **Auth boundaries**: the public assistant is intentionally open. Admin UI gating is client-side only
-  (`sessionStorage` key `arya_admin_access` after `POST /api/auth/login`). The `/api/admin/*` routes, `POST /api/articles`,
-  and `POST /api/articles/pdf` currently have **no server-side auth check** — do not assume they are protected, and
-  add server-side checks if you touch them. `POST /api/articles/bulk` requires `Authorization: Bearer <BULK_IMPORT_SECRET>`
-  (falls back to `ADMIN_PASSWORD`) with timing-safe comparison — keep that.
+- **Auth boundaries**: the public assistant is intentionally open (chat, reading articles/stats, submitting community
+  questions, feedback, analytics events). **Admin routes require server-side bearer auth — never rely on client-side
+  gating.** `requireAdmin` (`middlewares/admin-auth.ts`) verifies `Authorization: Bearer <token>` (HMAC-SHA256 signature,
+  timing-safe, plus expiry) and is applied to everything under `/api/admin/*` (via `router.use("/admin", requireAdmin)`,
+  registered before any admin route; only `POST /api/admin/login` sits above it), `POST /api/articles`, and
+  `POST /api/articles/pdf`. Any new admin/mutating/private route must use `requireAdmin` (or live under `/admin`) and
+  declare `security: [adminBearer: []]` in `openapi.yaml`. Tokens are stateless (Autoscale runs multiple instances) —
+  do not add in-memory sessions. Auth fails closed: if `ADMIN_PASSWORD` or `ADMIN_TOKEN_SECRET` (>= 32 chars) is unset,
+  login and admin routes return 503. `POST /api/articles/bulk` accepts either an admin token or
+  `Authorization: Bearer <BULK_IMPORT_SECRET>` (falls back to `ADMIN_PASSWORD`), compared timing-safe — keep that for
+  automated importers. The web app stores the token in `sessionStorage` (`arya_admin_token`), sends it through
+  `setAuthTokenGetter` in the generated client, and clears it / shows the login form on any 401. Never put secrets in
+  client code or `VITE_*` env vars.
 - **DB schema changes**: edit `lib/db/src/schema/*.ts`, then `pnpm --filter @workspace/db run push` (dev). No migration files.
 - **Dependencies**: `pnpm-workspace.yaml` enforces `minimumReleaseAge: 1440` (supply-chain defense) — do not disable.
   Shared versions live in the `catalog:`; `react`/`react-dom` pinned to 19.1.0. Keep `pnpm-lock.yaml` committed.
@@ -110,7 +121,8 @@ Deploy by clicking Publish in Replit. There is no Dockerfile, CI workflow, or Ve
 
 - **Database**: `DATABASE_URL`
 - **LLMs**: `ANTHROPIC_API_KEY`; `GEMINI_API_KEY` or `AI_INTEGRATIONS_GEMINI_API_KEY`; `AI_INTEGRATIONS_GEMINI_BASE_URL` (Replit-managed integration)
-- **Admin / import auth**: `ADMIN_PASSWORD`, `BULK_IMPORT_SECRET` (optional, falls back to `ADMIN_PASSWORD`)
+- **Admin / import auth**: `ADMIN_PASSWORD`, `ADMIN_TOKEN_SECRET` (HMAC key, >= 32 chars; both required or admin login is disabled),
+  `BULK_IMPORT_SECRET` (optional, falls back to `ADMIN_PASSWORD`). See `.env.example`.
 - **Server runtime**: `PORT`, `NODE_ENV`, `LOG_LEVEL`
 - **Web build**: `PORT`, `BASE_PATH`, `GA4_MEASUREMENT_ID` (injected as `VITE_GA4_MEASUREMENT_ID`; GA script only added if set)
 - **Replit**: `REPL_ID` (enables cartographer/dev-banner Vite plugins in dev)

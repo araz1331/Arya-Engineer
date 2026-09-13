@@ -1,12 +1,24 @@
 import { Router, type IRouter } from "express";
-import { timingSafeEqual } from "node:crypto";
 import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { ai } from "@workspace/integrations-gemini-ai";
 import { db, analyticsEventsTable, articlesTable, answerFeedbackTable, communityQuestionsTable } from "@workspace/db";
-import { AnswerCommunityQuestionBody, AnswerCommunityQuestionParams, AnswerCommunityQuestionResponse, BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, GetAnalyticsStatsResponse, GetArticleCountResponse, GetFeedbackStatsResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, ListCommunityQuestionsQueryParams, ListCommunityQuestionsResponse, LoginBody, LoginResponse, RecordAnalyticsEventBody, RecordAnalyticsEventResponse, SubmitAnswerFeedbackBody, SubmitAnswerFeedbackResponse, SubmitCommunityQuestionBody, SubmitCommunityQuestionResponse } from "@workspace/api-zod";
+import { AdminLoginBody, AdminLoginResponse, AnswerCommunityQuestionBody, AnswerCommunityQuestionParams, AnswerCommunityQuestionResponse, BulkImportArticlesBody, BulkImportArticlesResponse, ChatBody, ChatResponse, CreateArticleBody, CreateArticleResponse, GetAnalyticsStatsResponse, GetArticleCountResponse, GetFeedbackStatsResponse, GetStatsResponse, ImportPdfArticleBody, ImportPdfArticleResponse, ListArticlesQueryParams, ListArticlesResponse, ListCommunityQuestionsQueryParams, ListCommunityQuestionsResponse, RecordAnalyticsEventBody, RecordAnalyticsEventResponse, SubmitAnswerFeedbackBody, SubmitAnswerFeedbackResponse, SubmitCommunityQuestionBody, SubmitCommunityQuestionResponse } from "@workspace/api-zod";
 import { getArticleList, searchArticles, toArticleResponse, extractRelatedVideos } from "../lib/knowledge";
 import { cleanContent } from "../lib/content";
+import {
+  LOGIN_FAILURE_DELAY_MS,
+  clearLoginFailures,
+  getBearerToken,
+  isAdminAuthConfigured,
+  isLoginThrottled,
+  issueAdminToken,
+  loginClientKey,
+  recordLoginFailure,
+  requireAdmin,
+  secretsMatch,
+  verifyAdminToken,
+} from "../middlewares/admin-auth";
 
 const router: IRouter = Router();
 
@@ -64,13 +76,6 @@ function replaceNumberedSourcesWithTitles(
   });
 }
 
-function passwordsMatch(candidate: string, expected: string | undefined): boolean {
-  if (!expected) return false;
-  const candidateBuffer = Buffer.from(candidate);
-  const expectedBuffer = Buffer.from(expected);
-  return candidateBuffer.length === expectedBuffer.length && timingSafeEqual(candidateBuffer, expectedBuffer);
-}
-
 type AnalyticsEventValues = {
   eventType: string;
   visitorId: string | null | undefined;
@@ -117,26 +122,40 @@ async function getAnalyticsPeriod(start: Date) {
   };
 }
 
-router.post("/auth/login", async (req, res): Promise<void> => {
-  const parsed = LoginBody.safeParse(req.body);
+router.post("/admin/login", async (req, res): Promise<void> => {
+  const parsed = AdminLoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
   const expected = process.env.ADMIN_PASSWORD;
-  if (!expected) {
-    res.status(503).json({ error: "Password access is not configured." });
+  if (!expected || !isAdminAuthConfigured()) {
+    res.status(503).json({ error: "Admin access is not configured." });
     return;
   }
-  if (!passwordsMatch(parsed.data.password, expected)) {
+  const clientKey = loginClientKey(req);
+  if (isLoginThrottled(clientKey)) {
+    res.status(429).json({ error: "Too many failed attempts. Try again later." });
+    return;
+  }
+  if (!secretsMatch(parsed.data.password, expected)) {
+    recordLoginFailure(clientKey);
+    await new Promise((resolve) => setTimeout(resolve, LOGIN_FAILURE_DELAY_MS));
     res.status(401).json({ error: "Wrong password." });
     return;
   }
-  res.json(LoginResponse.parse({
-    authenticated: true,
-    area: parsed.data.area,
-  }));
+  const issued = issueAdminToken();
+  if (!issued) {
+    res.status(503).json({ error: "Admin access is not configured." });
+    return;
+  }
+  clearLoginFailures(clientKey);
+  res.json(AdminLoginResponse.parse(issued));
 });
+
+// Every other /api/admin/* route requires a valid admin bearer token.
+// Registered before any admin route so nothing under /admin can bypass it.
+router.use("/admin", requireAdmin);
 
 router.post("/analytics/events", async (req, res): Promise<void> => {
   const parsed = RecordAnalyticsEventBody.safeParse(req.body);
@@ -173,7 +192,7 @@ router.get("/articles", async (req, res): Promise<void> => {
   res.json(ListArticlesResponse.parse(rows.map(toArticleResponse)));
 });
 
-router.post("/articles", async (req, res): Promise<void> => {
+router.post("/articles", requireAdmin, async (req, res): Promise<void> => {
   const parsed = CreateArticleBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -237,7 +256,7 @@ router.get("/admin/articles/sample", async (req, res): Promise<void> => {
   })));
 });
 
-router.post("/articles/pdf", async (req, res): Promise<void> => {
+router.post("/articles/pdf", requireAdmin, async (req, res): Promise<void> => {
   const parsed = ImportPdfArticleBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -283,16 +302,17 @@ router.post("/articles/pdf", async (req, res): Promise<void> => {
 });
 
 router.post("/articles/bulk", async (req, res): Promise<void> => {
-  const configuredSecret = process.env.BULK_IMPORT_SECRET ?? process.env.ADMIN_PASSWORD;
-  if (!configuredSecret) {
+  // Accepts either an admin session token (admin UI) or the static bulk import
+  // secret (automated importers).
+  const configuredSecret = process.env.BULK_IMPORT_SECRET || process.env.ADMIN_PASSWORD;
+  if (!configuredSecret && !isAdminAuthConfigured()) {
     res.status(503).json({ error: "Bulk import access is not configured." });
     return;
   }
-  const authorization = req.get("authorization") ?? "";
-  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? "";
-  const expected = Buffer.from(configuredSecret);
-  const received = Buffer.from(token);
-  const validToken = expected.length === received.length && timingSafeEqual(expected, received);
+  const token = getBearerToken(req);
+  const validToken = Boolean(token) && (
+    verifyAdminToken(token) || (Boolean(configuredSecret) && secretsMatch(token, configuredSecret ?? ""))
+  );
   if (!validToken) {
     res.status(401).json({ error: "A valid bulk import bearer token is required." });
     return;

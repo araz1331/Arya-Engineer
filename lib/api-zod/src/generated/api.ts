@@ -9,20 +9,19 @@ import * as zod from 'zod';
 
 
 /**
- * @summary Verify the admin password
+ * @summary Exchange the admin password for a signed, expiring bearer token
  */
-export const loginBodyPasswordMax = 200;
+export const adminLoginBodyPasswordMax = 200;
 
 
 
-export const LoginBody = zod.object({
-  "password": zod.string().min(1).max(loginBodyPasswordMax),
-  "area": zod.enum(['admin'])
+export const AdminLoginBody = zod.object({
+  "password": zod.string().min(1).max(adminLoginBodyPasswordMax)
 })
 
-export const LoginResponse = zod.object({
-  "authenticated": zod.boolean(),
-  "area": zod.enum(['admin'])
+export const AdminLoginResponse = zod.object({
+  "token": zod.string(),
+  "expiresAt": zod.number().describe('Token expiry as Unix epoch milliseconds')
 })
 
 

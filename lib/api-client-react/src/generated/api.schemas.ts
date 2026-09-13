@@ -5,32 +5,18 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-export type LoginInputArea = typeof LoginInputArea[keyof typeof LoginInputArea];
-
-
-export const LoginInputArea = {
-  admin: 'admin',
-} as const;
-
-export interface LoginInput {
+export interface AdminLoginInput {
   /**
      * @minLength 1
      * @maxLength 200
      */
   password: string;
-  area: LoginInputArea;
 }
 
-export type AuthSessionArea = typeof AuthSessionArea[keyof typeof AuthSessionArea];
-
-
-export const AuthSessionArea = {
-  admin: 'admin',
-} as const;
-
-export interface AuthSession {
-  authenticated: boolean;
-  area: AuthSessionArea;
+export interface AdminToken {
+  token: string;
+  /** Token expiry as Unix epoch milliseconds */
+  expiresAt: number;
 }
 
 export interface HealthStatus {
